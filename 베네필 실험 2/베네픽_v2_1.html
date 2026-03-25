@@ -1,0 +1,3888 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>베네픽 v2.0 — 복지 수급 확률 분석</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ── CSS Variables ── */
+:root {
+  --blue: #4A90E2;
+  --blue-light: #EBF3FC;
+  --blue-dark: #2B6CB0;
+  --green: #2ECC71;
+  --green-light: #E6FAF0;
+  --green-dark: #1A9E57;
+  --red: #E74C3C;
+  --red-light: #FDECEA;
+  --orange: #F39C12;
+  --orange-light: #FEF5E7;
+  --gray-50: #F8FAFC;
+  --gray-100: #F1F5F9;
+  --gray-200: #E2E8F0;
+  --gray-300: #CBD5E1;
+  --gray-500: #64748B;
+  --gray-700: #334155;
+  --gray-900: #0F172A;
+  --white: #FFFFFF;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+  --shadow-md: 0 4px 16px rgba(0,0,0,.08), 0 2px 4px rgba(0,0,0,.04);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,.10), 0 4px 8px rgba(0,0,0,.06);
+  --radius: 16px;
+  --radius-sm: 10px;
+  --radius-lg: 24px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--gray-50);
+  color: var(--gray-900);
+  min-height: 100vh;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* ── NAV ── */
+nav {
+  background: var(--white);
+  border-bottom: 1px solid var(--gray-200);
+  padding: 0 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 64px;
+  position: sticky;
+  top: 0;
+  z-index: 200;
+  box-shadow: 0 1px 0 var(--gray-100);
+}
+
+.nav-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+
+.logo-mark {
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, var(--blue), var(--green));
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.5px;
+}
+
+.logo-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.logo-name {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--gray-900);
+  letter-spacing: -0.3px;
+}
+
+.logo-tag {
+  font-size: 10px;
+  color: var(--gray-500);
+  font-weight: 500;
+}
+
+.nav-center {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.nav-center a {
+  font-size: 14px;
+  color: var(--gray-500);
+  text-decoration: none;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all .15s;
+}
+
+.nav-center a:hover, .nav-center a.active {
+  color: var(--gray-900);
+  background: var(--gray-100);
+}
+
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.nav-avatar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  border: 1px solid var(--gray-200);
+  transition: all .15s;
+}
+
+.nav-avatar:hover { background: var(--gray-100); }
+
+.avatar-circle {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--blue-light), var(--green-light));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--blue);
+}
+
+.avatar-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray-700);
+}
+
+.btn-primary {
+  padding: 8px 20px;
+  background: linear-gradient(135deg, var(--blue), var(--blue-dark));
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .15s;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  letter-spacing: -0.1px;
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(74,144,226,.4);
+}
+
+.btn-green {
+  background: linear-gradient(135deg, var(--green), var(--green-dark));
+}
+
+.btn-green:hover { box-shadow: 0 4px 12px rgba(46,204,113,.4); }
+
+/* ── LAYOUT ── */
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 32px 40px;
+}
+
+.grid-main {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 24px;
+  align-items: start;
+}
+
+/* ── SCREEN TABS ── */
+.screen-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  padding: 6px;
+  box-shadow: var(--shadow-sm);
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 9px 16px;
+  border: none;
+  background: none;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray-500);
+  cursor: pointer;
+  transition: all .2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.tab-btn.active {
+  background: linear-gradient(135deg, var(--blue), var(--blue-dark));
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(74,144,226,.3);
+}
+
+.tab-btn:not(.active):hover { background: var(--gray-100); color: var(--gray-700); }
+
+/* ── USER PROFILE CARD ── */
+.profile-card {
+  background: linear-gradient(135deg, #0F172A 0%, #1E3A5F 50%, #1B4332 100%);
+  border-radius: var(--radius-lg);
+  padding: 32px 36px;
+  margin-bottom: 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.profile-card::before {
+  content: '';
+  position: absolute;
+  right: -40px;
+  top: -40px;
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, rgba(74,144,226,.25) 0%, transparent 70%);
+  border-radius: 50%;
+}
+
+.profile-card::after {
+  content: '';
+  position: absolute;
+  left: 60%;
+  bottom: -30px;
+  width: 150px;
+  height: 150px;
+  background: radial-gradient(circle, rgba(46,204,113,.2) 0%, transparent 70%);
+  border-radius: 50%;
+}
+
+.profile-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 28px;
+  position: relative;
+  z-index: 1;
+}
+
+.profile-user {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.profile-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(74,144,226,.4), rgba(46,204,113,.3));
+  border: 2px solid rgba(255,255,255,.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.profile-info h2 {
+  font-size: 20px;
+  font-weight: 800;
+  color: #fff;
+  margin-bottom: 2px;
+  letter-spacing: -0.3px;
+}
+
+.profile-info p {
+  font-size: 12px;
+  color: rgba(255,255,255,.55);
+  font-weight: 500;
+}
+
+.score-badge {
+  background: rgba(46,204,113,.2);
+  border: 1px solid rgba(46,204,113,.4);
+  border-radius: 12px;
+  padding: 8px 16px;
+  text-align: center;
+}
+
+.score-label {
+  font-size: 10px;
+  color: rgba(255,255,255,.6);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  margin-bottom: 2px;
+}
+
+.score-num {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--green);
+  line-height: 1;
+  letter-spacing: -1px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+.score-sub {
+  font-size: 10px;
+  color: rgba(255,255,255,.5);
+}
+
+.profile-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  position: relative;
+  z-index: 1;
+}
+
+.profile-tag {
+  background: rgba(255,255,255,.1);
+  border: 1px solid rgba(255,255,255,.15);
+  color: rgba(255,255,255,.85);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 5px 12px;
+  border-radius: 20px;
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* ── SECTION TITLE ── */
+.section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.section-title h3 {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--gray-900);
+  letter-spacing: -0.3px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.section-title a {
+  font-size: 13px;
+  color: var(--blue);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+/* ── POLICY CARDS (SCORING) ── */
+.policy-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+
+.policy-card {
+  background: var(--white);
+  border-radius: var(--radius);
+  padding: 20px 22px;
+  border: 1px solid var(--gray-200);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: all .2s;
+  position: relative;
+  overflow: hidden;
+}
+
+.policy-card:hover {
+  border-color: var(--blue);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.policy-card.top { border-left: 3px solid var(--green); }
+.policy-card.mid { border-left: 3px solid var(--blue); }
+.policy-card.low { border-left: 3px solid var(--orange); }
+
+.policy-top-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.policy-left {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex: 1;
+}
+
+.policy-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.policy-icon.green { background: var(--green-light); }
+.policy-icon.blue { background: var(--blue-light); }
+.policy-icon.orange { background: var(--orange-light); }
+
+.policy-meta h4 {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--gray-900);
+  margin-bottom: 4px;
+  letter-spacing: -0.2px;
+}
+
+.policy-meta p {
+  font-size: 12px;
+  color: var(--gray-500);
+  font-weight: 400;
+}
+
+.policy-badges {
+  display: flex;
+  gap: 5px;
+  margin-top: 6px;
+}
+
+.badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+  letter-spacing: .1px;
+}
+
+.badge-green { background: var(--green-light); color: var(--green-dark); }
+.badge-blue { background: var(--blue-light); color: var(--blue-dark); }
+.badge-gray { background: var(--gray-100); color: var(--gray-500); }
+.badge-orange { background: var(--orange-light); color: #B7770D; }
+
+.policy-percent {
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.percent-num {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -1px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  line-height: 1;
+}
+
+.percent-num.high { color: var(--green); }
+.percent-num.mid { color: var(--blue); }
+.percent-num.low { color: var(--orange); }
+
+.percent-label {
+  font-size: 10px;
+  color: var(--gray-500);
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+/* Progress bar */
+.progress-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.progress-track {
+  flex: 1;
+  height: 8px;
+  background: var(--gray-100);
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 20px;
+  position: relative;
+  transition: width 1s cubic-bezier(.25,.8,.25,1);
+}
+
+.progress-fill.green { background: linear-gradient(90deg, var(--green-dark), var(--green)); }
+.progress-fill.blue { background: linear-gradient(90deg, var(--blue-dark), var(--blue)); }
+.progress-fill.orange { background: linear-gradient(90deg, #D68910, var(--orange)); }
+
+.progress-fill::after {
+  content: '';
+  position: absolute;
+  right: 2px;
+  top: 1px;
+  width: 6px;
+  height: 6px;
+  background: rgba(255,255,255,.7);
+  border-radius: 50%;
+}
+
+.benefit-chip {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--gray-700);
+  white-space: nowrap;
+  letter-spacing: -0.3px;
+}
+
+.policy-action {
+  position: absolute;
+  right: 22px;
+  bottom: 20px;
+  font-size: 11px;
+  color: var(--blue);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  opacity: 0;
+  transition: opacity .2s;
+}
+
+.policy-card:hover .policy-action { opacity: 1; }
+
+/* ── DETAIL PANEL ── */
+.detail-panel {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  padding: 28px;
+  border: 1px solid var(--gray-200);
+  box-shadow: var(--shadow-md);
+  margin-bottom: 24px;
+  display: none;
+}
+
+.detail-panel.visible { display: block; }
+
+.detail-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--gray-100);
+}
+
+.detail-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: var(--green-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.detail-title h3 {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--gray-900);
+  letter-spacing: -0.3px;
+  margin-bottom: 4px;
+}
+
+.detail-prob {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.detail-prob .pct {
+  font-size: 36px;
+  font-weight: 800;
+  color: var(--green);
+  letter-spacing: -2px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  line-height: 1;
+}
+
+.detail-prob .label {
+  font-size: 14px;
+  color: var(--gray-500);
+  font-weight: 500;
+}
+
+.analysis-section {
+  margin-bottom: 20px;
+}
+
+.analysis-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--gray-500);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  margin-bottom: 10px;
+}
+
+.issue-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--red-light);
+  border-radius: var(--radius-sm);
+  margin-bottom: 8px;
+  border: 1px solid #FBCAC8;
+}
+
+.issue-item .icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+
+.issue-item p {
+  font-size: 13px;
+  color: #C0392B;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.guide-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--green-light);
+  border-radius: var(--radius-sm);
+  margin-bottom: 8px;
+  border: 1px solid #B2EED1;
+}
+
+.guide-item .icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+
+.guide-item p {
+  font-size: 13px;
+  color: var(--green-dark);
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+/* ── SIDEBAR ── */
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: sticky;
+  top: 80px;
+}
+
+.sidebar-card {
+  background: var(--white);
+  border-radius: var(--radius);
+  padding: 20px;
+  border: 1px solid var(--gray-200);
+  box-shadow: var(--shadow-sm);
+}
+
+.sidebar-card h4 {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--gray-900);
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  letter-spacing: -0.2px;
+}
+
+/* Summary stats */
+.stat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.stat-item {
+  background: var(--gray-50);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  text-align: center;
+  border: 1px solid var(--gray-100);
+}
+
+.stat-item .val {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  line-height: 1;
+  margin-bottom: 2px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+.stat-item .val.blue { color: var(--blue); }
+.stat-item .val.green { color: var(--green); }
+.stat-item .lbl {
+  font-size: 10px;
+  color: var(--gray-500);
+  font-weight: 500;
+}
+
+/* Checklist */
+.checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.check-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background .15s;
+  border: 1px solid transparent;
+}
+
+.check-item:hover { background: var(--gray-50); }
+
+.check-item.done { background: var(--green-light); border-color: #B2EED1; }
+
+.check-box {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  border: 2px solid var(--gray-300);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all .15s;
+}
+
+.check-item.done .check-box {
+  background: var(--green);
+  border-color: var(--green);
+  color: #fff;
+  font-size: 11px;
+}
+
+.check-text {
+  font-size: 13px;
+  color: var(--gray-700);
+  font-weight: 500;
+  flex: 1;
+}
+
+.check-item.done .check-text {
+  color: var(--green-dark);
+  text-decoration: line-through;
+  text-decoration-color: var(--green-dark);
+}
+
+/* Portfolio card */
+.portfolio-total {
+  background: linear-gradient(135deg, var(--blue-light), var(--green-light));
+  border-radius: var(--radius);
+  padding: 16px;
+  text-align: center;
+  margin-bottom: 14px;
+  border: 1px solid var(--gray-200);
+}
+
+.portfolio-total .amount {
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--gray-900);
+  letter-spacing: -2px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  line-height: 1;
+}
+
+.portfolio-total .lbl {
+  font-size: 11px;
+  color: var(--gray-500);
+  font-weight: 500;
+  margin-top: 4px;
+}
+
+.portfolio-items {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.port-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  background: var(--gray-50);
+  border-radius: 8px;
+  border: 1px solid var(--gray-100);
+}
+
+.port-item .name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gray-700);
+}
+
+.port-item .amt {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--blue);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+/* Ad card */
+.ad-card {
+  background: linear-gradient(135deg, #667EEA 0%, #764BA2 100%);
+  border-radius: var(--radius);
+  padding: 16px;
+  color: #fff;
+  position: relative;
+  overflow: hidden;
+}
+
+.ad-card::before {
+  content: '';
+  position: absolute;
+  right: -20px;
+  top: -20px;
+  width: 100px;
+  height: 100px;
+  background: rgba(255,255,255,.1);
+  border-radius: 50%;
+}
+
+.ad-tag {
+  font-size: 9px;
+  font-weight: 700;
+  background: rgba(255,255,255,.2);
+  padding: 2px 6px;
+  border-radius: 4px;
+  letter-spacing: .5px;
+  color: rgba(255,255,255,.8);
+  margin-bottom: 8px;
+  display: inline-block;
+}
+
+.ad-card h4 {
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 4px;
+  position: relative;
+  z-index: 1;
+}
+
+.ad-card p {
+  font-size: 11px;
+  color: rgba(255,255,255,.75);
+  margin-bottom: 12px;
+  line-height: 1.5;
+  position: relative;
+  z-index: 1;
+}
+
+.ad-btn {
+  background: rgba(255,255,255,.2);
+  border: 1px solid rgba(255,255,255,.3);
+  color: #fff;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+  text-align: center;
+  transition: background .15s;
+  position: relative;
+  z-index: 1;
+}
+
+.ad-btn:hover { background: rgba(255,255,255,.3); }
+
+/* ── PORTFOLIO SCREEN ── */
+.portfolio-screen { display: none; }
+.portfolio-screen.active { display: block; }
+
+.portfolio-hero {
+  background: linear-gradient(135deg, var(--gray-900) 0%, #1E3A5F 100%);
+  border-radius: var(--radius-lg);
+  padding: 36px 40px;
+  margin-bottom: 24px;
+  color: #fff;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.portfolio-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='rgba(255,255,255,0.03)' fill-rule='evenodd'%3E%3Ccircle cx='20' cy='20' r='8'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+.portfolio-hero .big-num {
+  font-size: 56px;
+  font-weight: 800;
+  letter-spacing: -3px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  background: linear-gradient(135deg, #fff, var(--green));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1;
+  margin-bottom: 8px;
+  position: relative;
+  z-index: 1;
+}
+
+.portfolio-hero p {
+  font-size: 15px;
+  color: rgba(255,255,255,.65);
+  position: relative;
+  z-index: 1;
+}
+
+.port-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.port-grid-card {
+  background: var(--white);
+  border-radius: var(--radius);
+  padding: 22px;
+  border: 1px solid var(--gray-200);
+  box-shadow: var(--shadow-sm);
+  transition: all .2s;
+}
+
+.port-grid-card:hover {
+  border-color: var(--blue);
+  box-shadow: var(--shadow-md);
+}
+
+.port-grid-card .icon {
+  font-size: 24px;
+  margin-bottom: 10px;
+}
+
+.port-grid-card h4 {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--gray-900);
+  margin-bottom: 4px;
+  letter-spacing: -0.2px;
+}
+
+.port-grid-card .amount {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--blue);
+  letter-spacing: -0.8px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+.port-grid-card .period {
+  font-size: 11px;
+  color: var(--gray-500);
+  margin-top: 2px;
+}
+
+/* ── APPLY SCREEN ── */
+.apply-screen { display: none; }
+.apply-screen.active { display: block; }
+
+.flow-steps {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-bottom: 28px;
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  box-shadow: var(--shadow-sm);
+}
+
+.flow-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.flow-step .num {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  background: var(--gray-100);
+  color: var(--gray-500);
+  flex-shrink: 0;
+}
+
+.flow-step.done .num { background: var(--green); color: #fff; }
+.flow-step.active .num { background: var(--blue); color: #fff; }
+
+.flow-step .label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gray-500);
+}
+
+.flow-step.done .label { color: var(--green-dark); }
+.flow-step.active .label { color: var(--blue); }
+
+.flow-arrow {
+  font-size: 16px;
+  color: var(--gray-300);
+  margin: 0 8px;
+  flex-shrink: 0;
+}
+
+.doc-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.doc-card {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: all .15s;
+}
+
+.doc-card:hover { border-color: var(--blue); box-shadow: var(--shadow-md); }
+
+.doc-card.ready { border-color: var(--green); background: var(--green-light); }
+
+.doc-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--gray-100);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.doc-card.ready .doc-icon { background: rgba(46,204,113,.2); }
+
+.doc-info h5 {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--gray-900);
+  margin-bottom: 2px;
+}
+
+.doc-info p { font-size: 11px; color: var(--gray-500); }
+.doc-card.ready .doc-info p { color: var(--green-dark); }
+
+.doc-status {
+  margin-left: auto;
+  font-size: 18px;
+}
+
+/* Big CTA */
+.cta-section {
+  background: linear-gradient(135deg, var(--blue) 0%, var(--blue-dark) 100%);
+  border-radius: var(--radius-lg);
+  padding: 28px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 8px 24px rgba(74,144,226,.35);
+}
+
+.cta-text h3 {
+  font-size: 20px;
+  font-weight: 800;
+  color: #fff;
+  margin-bottom: 4px;
+  letter-spacing: -0.3px;
+}
+
+.cta-text p {
+  font-size: 13px;
+  color: rgba(255,255,255,.7);
+}
+
+.cta-btn {
+  background: #fff;
+  color: var(--blue);
+  padding: 12px 28px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 800;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0,0,0,.15);
+  transition: all .2s;
+  letter-spacing: -0.2px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cta-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0,0,0,.2);
+}
+
+/* ── AI LOADING ANIMATION ── */
+.ai-loading {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(15,23,42,.7);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+}
+
+.ai-loading.show { display: flex; }
+
+.ai-loading-card {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  padding: 44px 52px;
+  text-align: center;
+  box-shadow: var(--shadow-lg);
+  max-width: 360px;
+}
+
+.ai-spinner {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 3px solid var(--gray-100);
+  border-top-color: var(--blue);
+  animation: spin 1s linear infinite;
+  margin: 0 auto 20px;
+  position: relative;
+}
+
+.ai-spinner::after {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  border-top-color: var(--green);
+  animation: spin .7s linear infinite reverse;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.ai-loading-text h3 {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--gray-900);
+  margin-bottom: 6px;
+  letter-spacing: -0.2px;
+}
+
+.ai-loading-text p {
+  font-size: 13px;
+  color: var(--gray-500);
+  line-height: 1.6;
+}
+
+.ai-dots span {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--blue);
+  margin: 0 2px;
+  animation: dot-bounce .8s infinite alternate;
+}
+
+.ai-dots span:nth-child(2) { animation-delay: .15s; background: var(--green); }
+.ai-dots span:nth-child(3) { animation-delay: .3s; }
+
+@keyframes dot-bounce {
+  to { transform: translateY(-8px); opacity: .4; }
+}
+
+/* ── INPUT FORM ── */
+.input-card {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  padding: 28px 32px;
+  border: 1px solid var(--gray-200);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 24px;
+}
+
+.input-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.input-card-header h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--gray-900);
+  letter-spacing: -0.2px;
+}
+
+.ai-chip {
+  background: linear-gradient(135deg, var(--blue-light), var(--green-light));
+  border: 1px solid var(--gray-200);
+  color: var(--blue-dark);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.input-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.input-item label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--gray-500);
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  margin-bottom: 6px;
+}
+
+.input-item select,
+.input-item input {
+  width: 100%;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-weight: 500;
+  border: 1.5px solid var(--gray-200);
+  border-radius: var(--radius-sm);
+  background: var(--gray-50);
+  color: var(--gray-900);
+  outline: none;
+  transition: all .15s;
+  font-family: 'Pretendard', sans-serif;
+  appearance: none;
+}
+
+.input-item select:focus,
+.input-item input:focus {
+  border-color: var(--blue);
+  background: var(--white);
+  box-shadow: 0 0 0 3px rgba(74,144,226,.1);
+}
+
+.analyze-btn {
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(135deg, var(--blue), var(--blue-dark));
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .2s;
+  letter-spacing: -0.2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.analyze-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(74,144,226,.4);
+}
+
+/* ── AD INLINE ── */
+.inline-ad {
+  background: linear-gradient(135deg, #FF9A9E 0%, #FAD0C4 100%);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 12px;
+  border: 1px solid rgba(255,255,255,.5);
+  cursor: pointer;
+  transition: opacity .15s;
+}
+
+.inline-ad:hover { opacity: .9; }
+
+.inline-ad-icon {
+  font-size: 28px;
+  flex-shrink: 0;
+}
+
+.inline-ad-text .ad-badge {
+  font-size: 9px;
+  background: rgba(0,0,0,.1);
+  color: rgba(0,0,0,.5);
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-weight: 700;
+  letter-spacing: .5px;
+  margin-bottom: 3px;
+  display: inline-block;
+}
+
+.inline-ad-text h5 {
+  font-size: 14px;
+  font-weight: 700;
+  color: #4A1A1A;
+  margin-bottom: 2px;
+}
+
+.inline-ad-text p {
+  font-size: 12px;
+  color: rgba(74,26,26,.7);
+}
+
+.inline-ad-arrow {
+  margin-left: auto;
+  color: rgba(74,26,26,.5);
+  font-size: 18px;
+}
+
+/* Screens */
+.screen { display: none; }
+.screen.active { display: block; }
+
+/* Animate bars on load */
+@keyframes fillBar {
+  from { width: 0; }
+}
+
+.progress-fill { animation: fillBar 1.2s cubic-bezier(.25,.8,.25,1) forwards; }
+
+/* Pulse for CTA */
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 8px 24px rgba(74,144,226,.35); }
+  50% { box-shadow: 0 8px 36px rgba(74,144,226,.6); }
+}
+
+.cta-section { animation: pulse-glow 3s ease-in-out infinite; }
+
+/* Recommendation cards */
+.rec-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.rec-card {
+  background: var(--gray-50);
+  border: 1px solid var(--gray-100);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  cursor: pointer;
+  transition: all .15s;
+}
+
+.rec-card:hover { border-color: var(--blue); background: var(--blue-light); }
+
+.rec-card .icon { font-size: 20px; margin-bottom: 6px; }
+.rec-card .name { font-size: 12px; font-weight: 700; color: var(--gray-900); margin-bottom: 2px; }
+.rec-card .desc { font-size: 11px; color: var(--gray-500); }
+
+/* Mobile responsive basics */
+@media (max-width: 900px) {
+  .grid-main { grid-template-columns: 1fr; }
+  .sidebar { position: static; }
+  .input-grid { grid-template-columns: 1fr 1fr; }
+  .port-grid { grid-template-columns: 1fr 1fr; }
+}
+
+/* ── COMMUNITY ── */
+.comm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+.comm-header h2 {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--gray-900);
+  letter-spacing: -0.4px;
+}
+.comm-header p { font-size: 13px; color: var(--gray-500); margin-top: 2px; }
+
+.comm-filter-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.comm-filter-btn {
+  padding: 7px 16px;
+  border-radius: 20px;
+  border: 1.5px solid var(--gray-200);
+  background: var(--white);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray-500);
+  cursor: pointer;
+  transition: all .18s;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.comm-filter-btn:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-light); }
+.comm-filter-btn.active {
+  background: linear-gradient(135deg, var(--blue), var(--blue-dark));
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 2px 8px rgba(74,144,226,.3);
+}
+
+.comm-post-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; }
+
+.comm-post-card {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  padding: 18px 22px;
+  cursor: pointer;
+  transition: all .18s;
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  box-shadow: var(--shadow-sm);
+}
+.comm-post-card:hover { border-color: var(--blue); box-shadow: var(--shadow-md); transform: translateY(-1px); }
+
+.comm-post-cat-badge {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  margin-top: 2px;
+}
+.cat-popular { background: #FFF3CD; color: #B7770D; }
+.cat-qna { background: var(--blue-light); color: var(--blue-dark); }
+.cat-review { background: var(--green-light); color: var(--green-dark); }
+.cat-regional { background: #F3E8FF; color: #6B21A8; }
+.cat-anonymous { background: var(--gray-100); color: var(--gray-500); }
+.cat-notice { background: #FEE2E2; color: #B91C1C; }
+
+.comm-post-body { flex: 1; min-width: 0; }
+.comm-post-body h4 { font-size: 15px; font-weight: 700; color: var(--gray-900); margin-bottom: 4px; letter-spacing: -0.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.comm-post-body p { font-size: 12px; color: var(--gray-500); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.comm-post-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+.comm-meta-item { font-size: 12px; color: var(--gray-500); display: flex; align-items: center; gap: 3px; }
+.comm-meta-item.author { font-weight: 600; color: var(--gray-700); }
+
+.comm-post-right { flex-shrink: 0; text-align: right; }
+.comm-stats { display: flex; gap: 10px; }
+.comm-stat { font-size: 12px; color: var(--gray-500); display: flex; align-items: center; gap: 3px; font-weight: 500; }
+
+/* FAB */
+.fab-write {
+  position: fixed;
+  bottom: 36px;
+  right: 40px;
+  background: linear-gradient(135deg, var(--blue), var(--blue-dark));
+  color: #fff;
+  border: none;
+  border-radius: 28px;
+  padding: 14px 24px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 6px 24px rgba(74,144,226,.45);
+  display: none;
+  align-items: center;
+  gap: 8px;
+  transition: all .18s;
+  z-index: 300;
+  letter-spacing: -0.2px;
+}
+.fab-write:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(74,144,226,.55); }
+.fab-write.visible { display: flex; }
+
+/* Modal */
+.comm-modal-bg {
+  position: fixed;
+  inset: 0;
+  background: rgba(15,23,42,.45);
+  backdrop-filter: blur(4px);
+  z-index: 500;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+.comm-modal-bg.open { display: flex; }
+
+.comm-modal {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  padding: 32px 36px;
+  width: 100%;
+  max-width: 560px;
+  box-shadow: var(--shadow-lg);
+  animation: modalIn .2s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes modalIn { from { opacity: 0; transform: scale(.94) translateY(12px); } }
+
+.comm-modal h3 { font-size: 20px; font-weight: 800; color: var(--gray-900); margin-bottom: 20px; letter-spacing: -0.3px; }
+
+.comm-modal label { display: block; font-size: 13px; font-weight: 600; color: var(--gray-700); margin-bottom: 6px; }
+.comm-modal input, .comm-modal textarea, .comm-modal select {
+  width: 100%;
+  border: 1.5px solid var(--gray-200);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  font-size: 14px;
+  font-family: 'Pretendard', sans-serif;
+  color: var(--gray-900);
+  background: var(--gray-50);
+  outline: none;
+  transition: border-color .15s;
+  margin-bottom: 14px;
+  resize: vertical;
+}
+.comm-modal input:focus, .comm-modal textarea:focus, .comm-modal select:focus { border-color: var(--blue); background: #fff; }
+
+.comm-modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 6px; }
+.btn-cancel {
+  padding: 10px 20px;
+  border: 1.5px solid var(--gray-200);
+  border-radius: var(--radius-sm);
+  background: var(--white);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--gray-500);
+  cursor: pointer;
+  transition: all .15s;
+}
+.btn-cancel:hover { background: var(--gray-100); }
+
+/* Detail view */
+.comm-detail-back {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+.comm-detail-back button {
+  background: var(--gray-100);
+  border: none;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray-700);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.comm-detail-card {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-lg);
+  padding: 32px 36px;
+  box-shadow: var(--shadow-md);
+  margin-bottom: 20px;
+}
+.comm-detail-card h2 { font-size: 22px; font-weight: 800; color: var(--gray-900); letter-spacing: -0.4px; margin-bottom: 12px; }
+.comm-detail-content { font-size: 15px; color: var(--gray-700); line-height: 1.8; white-space: pre-wrap; }
+.comm-detail-meta { display: flex; gap: 14px; align-items: center; margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid var(--gray-100); flex-wrap: wrap; }
+
+.comm-like-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 18px;
+  border: 1.5px solid var(--gray-200);
+  border-radius: 20px;
+  background: var(--white);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--gray-500);
+  cursor: pointer;
+  transition: all .15s;
+  margin-top: 20px;
+}
+.comm-like-btn.liked { border-color: #E74C3C; color: #E74C3C; background: #FFF5F5; }
+.comm-like-btn:hover { border-color: #E74C3C; color: #E74C3C; }
+
+/* Empty state */
+.comm-empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--gray-500);
+}
+.comm-empty .icon { font-size: 48px; margin-bottom: 16px; }
+.comm-empty h4 { font-size: 16px; font-weight: 700; color: var(--gray-700); margin-bottom: 6px; }
+.comm-empty p { font-size: 13px; }
+
+/* Community layout */
+.comm-layout {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 24px;
+  align-items: start;
+}
+.comm-sidebar { display: flex; flex-direction: column; gap: 16px; }
+.comm-sidebar-card {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  padding: 20px;
+  box-shadow: var(--shadow-sm);
+}
+.comm-sidebar-card h4 { font-size: 14px; font-weight: 700; color: var(--gray-900); margin-bottom: 12px; }
+.hot-item {
+  display: flex;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--gray-100);
+  cursor: pointer;
+  transition: all .15s;
+}
+.hot-item:last-child { border-bottom: none; }
+.hot-item:hover .hot-title { color: var(--blue); }
+.hot-num { font-size: 13px; font-weight: 800; color: var(--blue); min-width: 18px; }
+.hot-title { font-size: 13px; font-weight: 600; color: var(--gray-700); flex: 1; line-height: 1.4; }
+.hot-likes { font-size: 11px; color: var(--gray-500); margin-left: auto; white-space: nowrap; }
+@media (max-width: 900px) { .comm-layout { grid-template-columns: 1fr; } }
+
+/* ── LANGUAGE SELECTOR ── */
+.lang-selector {
+  position: relative;
+  display: inline-block;
+}
+
+.lang-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 12px 7px 10px;
+  background: var(--white);
+  border: 1.5px solid var(--gray-200);
+  border-radius: 10px;
+  cursor: pointer;
+  font-family: 'Pretendard', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--gray-700);
+  transition: all .18s cubic-bezier(.4,0,.2,1);
+  white-space: nowrap;
+  user-select: none;
+  outline: none;
+  height: 36px;
+}
+
+.lang-btn:hover {
+  border-color: #A8C7F0;
+  background: #F0F7FF;
+  color: var(--blue-dark);
+  box-shadow: 0 2px 8px rgba(74,144,226,.12);
+}
+
+.lang-btn:hover .globe-svg path,
+.lang-btn:hover .globe-svg circle {
+  stroke: var(--blue);
+}
+
+.lang-btn.open {
+  border-color: var(--blue);
+  background: #F0F7FF;
+  color: var(--blue-dark);
+  box-shadow: 0 0 0 3px rgba(74,144,226,.15);
+}
+
+.lang-btn.open .globe-svg path,
+.lang-btn.open .globe-svg circle {
+  stroke: var(--blue);
+}
+
+.globe-svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.globe-svg path,
+.globe-svg circle {
+  stroke: var(--gray-500);
+  transition: stroke .18s;
+}
+
+.lang-label-text {
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: -.01em;
+}
+
+.lang-chevron {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  margin-left: 1px;
+  transition: transform .2s cubic-bezier(.4,0,.2,1), opacity .18s;
+  opacity: .55;
+  color: currentColor;
+}
+
+.lang-btn:hover .lang-chevron,
+.lang-btn.open .lang-chevron { opacity: 1; }
+.lang-btn.open .lang-chevron { transform: rotate(180deg); }
+
+.lang-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 150px;
+  background: var(--white);
+  border: 1.5px solid var(--gray-200);
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(0,0,0,.12), 0 4px 12px rgba(0,0,0,.06);
+  overflow: hidden;
+  z-index: 999;
+  opacity: 0;
+  transform: translateY(-6px) scale(.98);
+  pointer-events: none;
+  transform-origin: top right;
+  transition: opacity .16s cubic-bezier(.4,0,.2,1), transform .16s cubic-bezier(.4,0,.2,1);
+}
+
+.lang-dropdown.visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: all;
+}
+
+.lang-dropdown-inner {
+  padding: 5px;
+}
+
+.lang-option {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 11px;
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--gray-700);
+  transition: background .1s, color .1s;
+  white-space: nowrap;
+  font-family: 'Pretendard', sans-serif;
+}
+
+.lang-option:hover {
+  background: #F0F7FF;
+  color: var(--blue-dark);
+}
+
+.lang-option.active {
+  background: var(--blue-light);
+  color: var(--blue-dark);
+  font-weight: 600;
+}
+
+.lang-flag {
+  font-size: 15px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.lang-check {
+  width: 13px;
+  height: 13px;
+  margin-left: auto;
+  color: var(--blue);
+  flex-shrink: 0;
+}
+
+.lang-divider {
+  height: 1px;
+  background: var(--gray-100);
+  margin: 3px 5px;
+}
+
+/* ── INSIGHT WIDGET ── */
+.insight-widget {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 16px;
+}
+.insight-widget-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.insight-widget-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--gray-900);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.insight-refresh-btn {
+  background: none;
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  padding: 4px 8px;
+  cursor: pointer;
+  color: var(--gray-500);
+  font-size: 11px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all .15s;
+  font-family: 'Pretendard', sans-serif;
+}
+.insight-refresh-btn:hover { background: var(--gray-100); color: var(--gray-700); }
+.insight-section-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--gray-500);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 10px;
+}
+.insight-policy-row { margin-bottom: 10px; }
+.insight-policy-row:last-child { margin-bottom: 0; }
+.insight-policy-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.insight-policy-name { font-size: 12px; color: var(--gray-700); font-weight: 500; }
+.insight-policy-pct { font-size: 12px; font-weight: 700; color: var(--blue); }
+.insight-bar-track { height: 5px; background: var(--blue-light); border-radius: 999px; overflow: hidden; }
+.insight-bar-fill { height: 100%; border-radius: 999px; background: var(--blue); transition: width 1s cubic-bezier(.4,0,.2,1); }
+.insight-divider { border: none; border-top: 1px solid var(--gray-100); margin: 12px 0; }
+.insight-stats-row { display: flex; gap: 8px; margin-top: 10px; }
+.insight-stat-chip { flex: 1; background: var(--gray-50); border-radius: 8px; padding: 8px 6px; text-align: center; border: 1px solid var(--gray-100); }
+.insight-stat-chip .val { font-size: 16px; font-weight: 800; color: var(--blue); font-family: 'Plus Jakarta Sans', sans-serif; }
+.insight-stat-chip .lbl { font-size: 10px; color: var(--gray-500); margin-top: 2px; }
+.insight-review-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.insight-review-label { font-size: 13px; font-weight: 700; color: var(--gray-900); display: flex; align-items: center; gap: 6px; }
+.insight-badge-positive { background: var(--green-light); color: var(--green-dark); font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 999px; }
+.insight-review-item { background: var(--gray-50); border-radius: 8px; padding: 9px 11px; margin-bottom: 7px; border: 1px solid var(--gray-100); }
+.insight-review-item:last-child { margin-bottom: 0; }
+.insight-review-text { font-size: 12px; color: var(--gray-700); line-height: 1.5; font-weight: 500; }
+.insight-review-tag { font-size: 10px; color: var(--gray-500); margin-top: 3px; display: block; }
+.insight-nav-dots { display: flex; justify-content: center; gap: 5px; margin-top: 10px; }
+.insight-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--gray-200); cursor: pointer; transition: background .2s; }
+.insight-dot.active { background: var(--blue); }
+</style>
+</head>
+<body>
+
+<!-- AI LOADING OVERLAY -->
+<div class="ai-loading" id="aiLoading">
+  <div class="ai-loading-card">
+    <div class="ai-spinner"></div>
+    <div class="ai-loading-text">
+      <h3>AI 분석 중입니다...</h3>
+      <p>입력하신 조건으로<br>수급 가능성을 계산하고 있어요</p>
+      <br>
+      <div class="ai-dots">
+        <span></span><span></span><span></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- NAV -->
+<nav>
+  <a href="#" class="nav-logo" onclick="showTab('dashboard')">
+    <div class="logo-mark">B</div>
+    <div class="logo-text">
+      <span class="logo-name">베네픽</span>
+      <span class="logo-tag">복지 수급 확률 분석 v2.0</span>
+    </div>
+  </a>
+  <div class="nav-center">
+    <a href="#" class="active" onclick="showTab('dashboard')">대시보드</a>
+    <a href="#" onclick="showTab('portfolio')">포트폴리오</a>
+    <a href="#" onclick="showTab('apply')">신청 보조</a>
+    <a href="#" onclick="showTab('community')">커뮤니티</a>
+  </div>
+  <div class="nav-right">
+    <!-- Language Selector -->
+    <div class="lang-selector" id="langSelector">
+      <button class="lang-btn" id="langBtn" onclick="toggleLangDropdown()" aria-haspopup="listbox" aria-expanded="false">
+        <svg class="globe-svg" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="10" cy="10" r="8.25" stroke-width="1.4"/>
+          <path d="M2 10h16" stroke-width="1.2" stroke-linecap="round"/>
+          <path d="M2.8 6.5h14.4" stroke-width="1.1" stroke-linecap="round"/>
+          <path d="M2.8 13.5h14.4" stroke-width="1.1" stroke-linecap="round"/>
+          <path d="M10 1.75C10 1.75 7 5.2 7 10s3 8.25 3 8.25" stroke-width="1.3" stroke-linecap="round"/>
+          <path d="M10 1.75C10 1.75 13 5.2 13 10s-3 8.25-3 8.25" stroke-width="1.3" stroke-linecap="round"/>
+        </svg>
+        <span class="lang-label-text" id="currentLangLabel">한국어</span>
+        <svg class="lang-chevron" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M2.5 4.5l3.5 3 3.5-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+      <div class="lang-dropdown" id="langDropdown" role="listbox">
+        <div class="lang-dropdown-inner">
+          <div class="lang-option active" onclick="selectLanguage(this,'한국어')" role="option">
+            <span class="lang-flag">🇰🇷</span>
+            한국어
+            <svg class="lang-check" viewBox="0 0 13 13" fill="none">
+              <path d="M2 6.5l3.5 3.5 5.5-6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="lang-option" onclick="selectLanguage(this,'English')" role="option">
+            <span class="lang-flag">🇺🇸</span>
+            English
+          </div>
+          <div class="lang-divider"></div>
+          <div class="lang-option" onclick="selectLanguage(this,'日本語')" role="option">
+            <span class="lang-flag">🇯🇵</span>
+            日本語
+          </div>
+          <div class="lang-option" onclick="selectLanguage(this,'Tiếng Việt')" role="option">
+            <span class="lang-flag">🇻🇳</span>
+            Tiếng Việt
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="nav-avatar">
+      <div class="avatar-circle">남</div>
+      <span class="avatar-name">남정현님</span>
+      <span>▾</span>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+
+  <!-- SCREEN TABS (mobile) -->
+  <div class="screen-tabs">
+    <button class="tab-btn active" id="tab-dashboard" onclick="showTab('dashboard')">📊 대시보드</button>
+    <button class="tab-btn" id="tab-detail" onclick="showTab('detail')">🔍 상세 분석</button>
+    <button class="tab-btn" id="tab-portfolio" onclick="showTab('portfolio')">💼 포트폴리오</button>
+    <button class="tab-btn" id="tab-apply" onclick="showTab('apply')">📋 신청 보조</button>
+    <button class="tab-btn" id="tab-community" onclick="showTab('community')">💬 커뮤니티</button>
+  </div>
+
+  <!-- ═══ DASHBOARD SCREEN ═══ -->
+  <div class="screen active" id="screen-dashboard">
+    <div class="grid-main">
+      <!-- LEFT COLUMN -->
+      <div>
+
+        <!-- USER PROFILE -->
+        <div class="profile-card">
+          <div class="profile-header">
+            <div class="profile-user">
+              <div class="profile-avatar">남</div>
+              <div class="profile-info">
+                <h2>남정현님의 복지 분석</h2>
+                <p>마지막 업데이트: 오늘 오전 9:42 · 서울특별시 마포구</p>
+              </div>
+            </div>
+            <div class="score-badge">
+              <div class="score-label">종합 수급 점수</div>
+              <div class="score-num">87</div>
+              <div class="score-sub">/ 100점</div>
+            </div>
+          </div>
+          <div class="profile-tags">
+            <span class="profile-tag">📅 만 27세</span>
+            <span class="profile-tag">📍 서울 마포구</span>
+            <span class="profile-tag">💰 중위소득 52%</span>
+            <span class="profile-tag">🏠 1인 가구</span>
+            <span class="profile-tag">👔 미취업</span>
+            <span class="profile-tag">🎓 대졸</span>
+          </div>
+        </div>
+
+        <!-- INPUT CARD -->
+        <div class="input-card">
+          <div class="input-card-header">
+            <h3>🎯 조건 입력으로 정확도 높이기</h3>
+            <span class="ai-chip">🤖 AI 분석</span>
+          </div>
+          <div class="input-grid">
+            <div class="input-item">
+              <label>연령</label>
+              <select id="sel-age">
+                <option>만 18세</option>
+                <option>만 19세</option>
+                <option>만 20세</option>
+                <option>만 21세</option>
+                <option>만 22세</option>
+                <option>만 23세</option>
+                <option>만 24세</option>
+                <option>만 25세</option>
+                <option>만 26세</option>
+                <option selected>만 27세</option>
+                <option>만 28세</option>
+                <option>만 29세</option>
+                <option>만 30세</option>
+                <option>만 31세</option>
+                <option>만 32세</option>
+                <option>만 33세</option>
+                <option>만 34세</option>
+                <option>만 35세</option>
+                <option>만 36세</option>
+                <option>만 37세</option>
+                <option>만 38세</option>
+                <option>만 39세</option>
+                <option>만 40세</option>
+                <option>만 41세</option>
+                <option>만 42세</option>
+                <option>만 43세</option>
+                <option>만 44세</option>
+                <option>만 45세</option>
+                <option>만 46세</option>
+                <option>만 47세</option>
+                <option>만 48세</option>
+                <option>만 49세</option>
+                <option>만 50세</option>
+                <option>만 51세</option>
+                <option>만 52세</option>
+                <option>만 53세</option>
+                <option>만 54세</option>
+                <option>만 55세</option>
+                <option>만 56세</option>
+                <option>만 57세</option>
+                <option>만 58세</option>
+                <option>만 59세</option>
+                <option>만 60세</option>
+                <option>만 61세</option>
+                <option>만 62세</option>
+                <option>만 63세</option>
+                <option>만 64세</option>
+                <option>만 65세 이상</option>
+              </select>
+            </div>
+            <div class="input-item">
+              <label>지역</label>
+              <select id="sel-region">
+                <option>서울특별시</option>
+                <option>부산광역시</option>
+                <option>대구광역시</option>
+                <option>인천광역시</option>
+                <option>광주광역시</option>
+                <option>대전광역시</option>
+                <option>울산광역시</option>
+                <option>세종특별자치시</option>
+                <option>경기도</option>
+                <option>강원특별자치도</option>
+                <option>충청북도</option>
+                <option>충청남도</option>
+                <option>전북특별자치도</option>
+                <option>전라남도</option>
+                <option>경상북도</option>
+                <option>경상남도</option>
+                <option>제주특별자치도</option>
+              </select>
+            </div>
+            <div class="input-item">
+              <label>소득 수준</label>
+              <select id="sel-income">
+                <option>중위소득 30% 이하</option>
+                <option>중위소득 30~40%</option>
+                <option>중위소득 40~50%</option>
+                <option selected>중위소득 50~60%</option>
+                <option>중위소득 60~70%</option>
+                <option>중위소득 70~80%</option>
+                <option>중위소득 80~90%</option>
+                <option>중위소득 90~100%</option>
+                <option>중위소득 100~120%</option>
+                <option>중위소득 120~150%</option>
+                <option>중위소득 150% 초과</option>
+              </select>
+            </div>
+            <div class="input-item">
+              <label>가구 유형</label>
+              <select id="sel-family">
+                <option selected>1인 가구</option>
+                <option>2인 가구</option>
+                <option>3인 가구</option>
+                <option>4인 이상 가구</option>
+                <option>한부모 가구</option>
+                <option>다자녀 가구</option>
+                <option>다문화 가구</option>
+                <option>조손 가구</option>
+                <option>노인 단독 가구</option>
+              </select>
+            </div>
+            <div class="input-item">
+              <label>취업 상태</label>
+              <select id="sel-employment">
+                <option selected>미취업</option>
+                <option>취업자 (정규직)</option>
+                <option>취업자 (비정규직/계약직)</option>
+                <option>자영업자</option>
+                <option>구직자 (실업)</option>
+                <option>학생</option>
+                <option>육아휴직 중</option>
+                <option>무직</option>
+              </select>
+            </div>
+            <div class="input-item">
+              <label>장애 여부</label>
+              <select id="sel-disability">
+                <option selected>없음</option>
+                <option>장애 1~3급 (심한 장애)</option>
+                <option>장애 4~6급 (심하지 않은 장애)</option>
+              </select>
+            </div>
+          </div>
+          <button class="analyze-btn" onclick="runAnalysis()">
+            🔍 수급 가능성 AI 분석 시작하기
+          </button>
+        </div>
+
+        <!-- POLICY SCORING LIST -->
+        <div>
+          <div class="section-title">
+            <h3>📈 수급 가능성 스코어링 <span style="font-size:13px;font-weight:500;color:var(--gray-500)">(높은 순)</span></h3>
+            <a href="#">전체보기 →</a>
+          </div>
+
+          <div class="policy-list">
+
+            <!-- Policy 1 - 92% -->
+            <div class="policy-card top" onclick="showDetail('youth-rent')">
+              <div class="policy-top-row">
+                <div class="policy-left">
+                  <div class="policy-icon green">🏠</div>
+                  <div class="policy-meta">
+                    <h4>청년 월세 한시 특별지원</h4>
+                    <p>만 19~34세 · 월세 60만원 이하 · 독립 거주 청년</p>
+                    <div class="policy-badges">
+                      <span class="badge badge-green">✅ 조건 충족</span>
+                      <span class="badge badge-blue">Gov24</span>
+                      <span class="badge badge-gray">월 최대 20만원</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="policy-percent">
+                  <div class="percent-num high">92<span style="font-size:18px">%</span></div>
+                  <div class="percent-label">수급 확률</div>
+                </div>
+              </div>
+              <div class="progress-row">
+                <div class="progress-track">
+                  <div class="progress-fill green" style="width:92%"></div>
+                </div>
+                <div class="benefit-chip">연 240만원</div>
+              </div>
+              <div class="policy-action">상세 분석 보기 →</div>
+            </div>
+
+            <!-- Policy 2 - 85% -->
+            <div class="policy-card top" onclick="showDetail('national-card')">
+              <div class="policy-top-row">
+                <div class="policy-left">
+                  <div class="policy-icon green">📚</div>
+                  <div class="policy-meta">
+                    <h4>국민내일배움카드</h4>
+                    <p>실업자 · 이직 예정자 · 단기근로자 지원 직업훈련</p>
+                    <div class="policy-badges">
+                      <span class="badge badge-green">✅ 조건 충족</span>
+                      <span class="badge badge-blue">고용부</span>
+                      <span class="badge badge-gray">최대 500만원</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="policy-percent">
+                  <div class="percent-num high">85<span style="font-size:18px">%</span></div>
+                  <div class="percent-label">수급 확률</div>
+                </div>
+              </div>
+              <div class="progress-row">
+                <div class="progress-track">
+                  <div class="progress-fill green" style="width:85%"></div>
+                </div>
+                <div class="benefit-chip">최대 500만원</div>
+              </div>
+              <div class="policy-action">상세 분석 보기 →</div>
+            </div>
+
+            <!-- INLINE AD -->
+            <div class="inline-ad">
+              <div class="inline-ad-icon">🏦</div>
+              <div class="inline-ad-text">
+                <span class="ad-badge">AD</span>
+                <h5>카카오뱅크 청년 전세 대출</h5>
+                <p>연 2.1%부터 · 최대 2억원 · 5분 비대면 신청</p>
+              </div>
+              <div class="inline-ad-arrow">›</div>
+            </div>
+
+            <!-- Policy 3 - 78% -->
+            <div class="policy-card mid" onclick="showDetail('youth-employment')">
+              <div class="policy-top-row">
+                <div class="policy-left">
+                  <div class="policy-icon blue">💼</div>
+                  <div class="policy-meta">
+                    <h4>청년도약계좌</h4>
+                    <p>만 19~34세 · 개인소득 6,000만원 이하 · 5년 적립</p>
+                    <div class="policy-badges">
+                      <span class="badge badge-blue">⚡ 확인 필요</span>
+                      <span class="badge badge-blue">금융위</span>
+                      <span class="badge badge-gray">최대 5,000만원</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="policy-percent">
+                  <div class="percent-num mid">78<span style="font-size:18px">%</span></div>
+                  <div class="percent-label">수급 확률</div>
+                </div>
+              </div>
+              <div class="progress-row">
+                <div class="progress-track">
+                  <div class="progress-fill blue" style="width:78%"></div>
+                </div>
+                <div class="benefit-chip">정부기여금 포함</div>
+              </div>
+              <div class="policy-action">상세 분석 보기 →</div>
+            </div>
+
+            <!-- Policy 4 - 74% -->
+            <div class="policy-card mid" onclick="showDetail('health')">
+              <div class="policy-top-row">
+                <div class="policy-left">
+                  <div class="policy-icon blue">🏥</div>
+                  <div class="policy-meta">
+                    <h4>청년 마음건강 지원사업</h4>
+                    <p>만 19~34세 · 심리상담 바우처 · 연간 10회</p>
+                    <div class="policy-badges">
+                      <span class="badge badge-green">✅ 조건 충족</span>
+                      <span class="badge badge-gray">복지부</span>
+                      <span class="badge badge-gray">10회 무료</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="policy-percent">
+                  <div class="percent-num mid">74<span style="font-size:18px">%</span></div>
+                  <div class="percent-label">수급 확률</div>
+                </div>
+              </div>
+              <div class="progress-row">
+                <div class="progress-track">
+                  <div class="progress-fill blue" style="width:74%"></div>
+                </div>
+                <div class="benefit-chip">연 80만원 상당</div>
+              </div>
+              <div class="policy-action">상세 분석 보기 →</div>
+            </div>
+
+            <!-- Policy 5 - 41% -->
+            <div class="policy-card low" onclick="showDetail('startup')">
+              <div class="policy-top-row">
+                <div class="policy-left">
+                  <div class="policy-icon orange">🚀</div>
+                  <div class="policy-meta">
+                    <h4>청년창업사관학교</h4>
+                    <p>만 39세 이하 · 창업 아이템 보유 · 사업계획서 필요</p>
+                    <div class="policy-badges">
+                      <span class="badge badge-orange">⚠️ 조건 부족</span>
+                      <span class="badge badge-gray">중기부</span>
+                      <span class="badge badge-gray">최대 1억원</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="policy-percent">
+                  <div class="percent-num low">41<span style="font-size:18px">%</span></div>
+                  <div class="percent-label">수급 확률</div>
+                </div>
+              </div>
+              <div class="progress-row">
+                <div class="progress-track">
+                  <div class="progress-fill orange" style="width:41%"></div>
+                </div>
+                <div class="benefit-chip">최대 1억원</div>
+              </div>
+              <div class="policy-action">상세 분석 보기 →</div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT SIDEBAR -->
+      <div class="sidebar">
+
+        <!-- Summary stats -->
+        <div class="sidebar-card">
+          <h4>📊 나의 수급 현황</h4>
+          <div class="stat-grid">
+            <div class="stat-item">
+              <div class="val green">12</div>
+              <div class="lbl">해당 정책 수</div>
+            </div>
+            <div class="stat-item">
+              <div class="val blue">87%</div>
+              <div class="lbl">평균 확률</div>
+            </div>
+            <div class="stat-item">
+              <div class="val green">1,040<span style="font-size:14px">만</span></div>
+              <div class="lbl">예상 수혜액</div>
+            </div>
+            <div class="stat-item">
+              <div class="val blue">3</div>
+              <div class="lbl">즉시 신청 가능</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Portfolio quick -->
+        <div class="sidebar-card">
+          <h4>💼 추천 포트폴리오</h4>
+          <div class="portfolio-total">
+            <div class="amount">1,040만원</div>
+            <div class="lbl">총 예상 연간 수혜액</div>
+          </div>
+          <div class="portfolio-items">
+            <div class="port-item">
+              <span class="name">🏠 청년 월세 지원</span>
+              <span class="amt">240만</span>
+            </div>
+            <div class="port-item">
+              <span class="name">📚 내일배움카드</span>
+              <span class="amt">500만</span>
+            </div>
+            <div class="port-item">
+              <span class="name">🏥 마음건강 지원</span>
+              <span class="amt">80만</span>
+            </div>
+            <div class="port-item">
+              <span class="name">+ 기타 혜택</span>
+              <span class="amt" style="color:var(--green)">220만</span>
+            </div>
+          </div>
+          <button class="btn-primary" style="width:100%;justify-content:center;padding:10px;" onclick="showTab('portfolio')">
+            💼 포트폴리오 전체 보기 →
+          </button>
+        </div>
+
+        <!-- Checklist -->
+        <div class="sidebar-card">
+          <h4>✅ 신청 체크리스트</h4>
+          <div class="checklist">
+            <div class="check-item done" onclick="toggleCheck(this)">
+              <div class="check-box">✓</div>
+              <span class="check-text">신청자 정보 입력</span>
+            </div>
+            <div class="check-item done" onclick="toggleCheck(this)">
+              <div class="check-box">✓</div>
+              <span class="check-text">소득 확인서 준비</span>
+            </div>
+            <div class="check-item" onclick="toggleCheck(this)">
+              <div class="check-box"></div>
+              <span class="check-text">신청서 작성</span>
+            </div>
+            <div class="check-item" onclick="toggleCheck(this)">
+              <div class="check-box"></div>
+              <span class="check-text">서류 제출</span>
+            </div>
+            <div class="check-item" onclick="toggleCheck(this)">
+              <div class="check-box"></div>
+              <span class="check-text">계좌 등록</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recommended services -->
+        <div class="sidebar-card">
+          <h4>🎯 맞춤 추천 서비스</h4>
+          <div class="rec-cards">
+            <div class="rec-card">
+              <div class="icon">🏦</div>
+              <div class="name">청년 전세 대출</div>
+              <div class="desc">연 2.1%부터</div>
+            </div>
+            <div class="rec-card">
+              <div class="icon">📱</div>
+              <div class="name">토스 청년 적금</div>
+              <div class="desc">연 6% 특판</div>
+            </div>
+            <div class="rec-card">
+              <div class="icon">📖</div>
+              <div class="name">클래스101</div>
+              <div class="desc">배움카드 사용가</div>
+            </div>
+            <div class="rec-card">
+              <div class="icon">🧘</div>
+              <div class="name">마인드카페</div>
+              <div class="desc">심리상담 앱</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- AD -->
+        <div class="ad-card">
+          <div class="ad-tag">SPONSORED</div>
+          <h4>🎓 패스트캠퍼스 × 내일배움카드</h4>
+          <p>배움카드로 수강 가능한 인기 강의 모음. 지금 바로 확인하세요!</p>
+          <button class="ad-btn">무료로 강의 둘러보기 →</button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ DETAIL SCREEN ═══ -->
+  <div class="screen" id="screen-detail">
+    <div class="grid-main">
+      <div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;">
+          <button onclick="showTab('dashboard')" style="background:var(--gray-100);border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;color:var(--gray-700);cursor:pointer;display:flex;align-items:center;gap:5px;">← 목록으로</button>
+          <span style="font-size:14px;color:var(--gray-500);">/ 상세 분석</span>
+        </div>
+
+        <!-- Detail Card -->
+        <div class="detail-panel" id="detail-panel-main">
+          <div class="detail-header">
+            <div class="detail-icon">🏠</div>
+            <div class="detail-title" style="flex:1;">
+              <h3 id="detail-policy-name">청년 월세 한시 특별지원</h3>
+              <div class="detail-prob">
+                <span class="pct" id="detail-pct">92</span><span style="font-size:28px;font-weight:800;color:var(--green);">%</span>
+                <span class="label">수급 확률</span>
+              </div>
+              <div style="margin-top:8px;">
+                <div class="progress-track" style="height:10px;">
+                  <div class="progress-fill green" id="detail-bar" style="width:92%"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="analysis-section" id="detail-issue-section">
+            <div class="analysis-label">❌ 탈락 예상 이유</div>
+            <div class="issue-item">
+              <span class="icon">⚠️</span>
+              <p><strong>주민등록 전입 미완료:</strong> 현재 거주지 주민등록이 신청 주소와 일치하지 않을 수 있습니다. 서류 심사 시 탈락 요인이 될 수 있습니다.</p>
+            </div>
+            <div class="issue-item">
+              <span class="icon">📋</span>
+              <p><strong>임대차 계약서 미비:</strong> 월세 계약 기간이 남은 계약서 원본 및 확정일자 필요합니다.</p>
+            </div>
+          </div>
+
+          <div class="analysis-section" id="detail-guide-section">
+            <div class="analysis-label">💡 해결 방법 & 행동 가이드</div>
+            <div class="guide-item">
+              <span class="icon">✅</span>
+              <p><strong>1단계: 전입신고 완료하기</strong> — 거주지 주민센터를 방문하여 현 주소로 전입신고를 진행하세요. 처리 기간: 당일</p>
+            </div>
+            <div class="guide-item">
+              <span class="icon">📎</span>
+              <p><strong>2단계: 임대차 계약서 확인</strong> — 계약서에 확정일자 도장이 찍혀 있는지 확인하고, 없다면 주민센터 방문 시 동시에 신청하세요.</p>
+            </div>
+            <div class="guide-item">
+              <span class="icon">🚀</span>
+              <p><strong>3단계: 복지로에서 온라인 신청</strong> — 위 서류 준비 후 bokjiro.go.kr에서 신청서를 제출하세요. 30일 이내 결과를 통보받습니다.</p>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:10px;margin-top:4px;">
+            <button class="btn-primary btn-green" style="flex:1;padding:12px;font-size:14px;justify-content:center;" onclick="showTab('apply')">
+              📋 신청 보조 시작하기 →
+            </button>
+            <button class="btn-primary" style="background:var(--gray-100);color:var(--gray-700);flex:none;padding:12px 16px;" onclick="showTab('dashboard')">
+              목록
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sidebar same -->
+      <div class="sidebar">
+        <div class="sidebar-card">
+          <h4>📊 이 정책 요약</h4>
+          <div class="stat-grid">
+            <div class="stat-item"><div class="val green">92%</div><div class="lbl">수급 확률</div></div>
+            <div class="stat-item"><div class="val blue">240만</div><div class="lbl">연간 혜택</div></div>
+            <div class="stat-item"><div class="val green">1개월</div><div class="lbl">처리 기간</div></div>
+            <div class="stat-item"><div class="val blue">2건</div><div class="lbl">해결 필요</div></div>
+          </div>
+        </div>
+        <div class="ad-card">
+          <div class="ad-tag">SPONSORED</div>
+          <h4>🏠 다방 부동산</h4>
+          <p>월세 지원 조건에 맞는 매물 바로 찾기</p>
+          <button class="ad-btn">매물 보러가기 →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ PORTFOLIO SCREEN ═══ -->
+  <div class="screen" id="screen-portfolio">
+    <div class="portfolio-hero">
+      <div style="position:relative;z-index:1;">
+        <p style="font-size:14px;color:rgba(255,255,255,.5);margin-bottom:8px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;">총 예상 연간 수혜액</p>
+        <div class="big-num">1,040만원</div>
+        <p>최적 조합 12개 정책 기준 · 남정현님 맞춤 분석</p>
+        <div style="display:flex;justify-content:center;gap:12px;margin-top:16px;">
+          <span style="background:rgba(46,204,113,.2);border:1px solid rgba(46,204,113,.3);color:var(--green);font-size:12px;font-weight:600;padding:5px 14px;border-radius:20px;">✅ 즉시 신청 가능 3건</span>
+          <span style="background:rgba(74,144,226,.2);border:1px solid rgba(74,144,226,.3);color:#7EC8E3;font-size:12px;font-weight:600;padding:5px 14px;border-radius:20px;">⚡ 조건 보완 후 5건</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-title">
+      <h3>💼 최적 복지 포트폴리오</h3>
+      <a href="#">정책 추가하기 +</a>
+    </div>
+
+    <div class="port-grid">
+      <div class="port-grid-card">
+        <div class="icon">🏠</div>
+        <h4>청년 월세 특별지원</h4>
+        <div class="amount">240만원</div>
+        <div class="period">월 20만원 × 12개월</div>
+        <div style="margin-top:10px;"><span class="badge badge-green">즉시 신청</span></div>
+      </div>
+      <div class="port-grid-card">
+        <div class="icon">📚</div>
+        <h4>국민내일배움카드</h4>
+        <div class="amount">500만원</div>
+        <div class="period">훈련비 전액 지원</div>
+        <div style="margin-top:10px;"><span class="badge badge-green">즉시 신청</span></div>
+      </div>
+      <div class="port-grid-card">
+        <div class="icon">🏥</div>
+        <h4>청년 마음건강 지원</h4>
+        <div class="amount">80만원</div>
+        <div class="period">상담 10회 × 8만원</div>
+        <div style="margin-top:10px;"><span class="badge badge-green">즉시 신청</span></div>
+      </div>
+      <div class="port-grid-card">
+        <div class="icon">💰</div>
+        <h4>청년도약계좌</h4>
+        <div class="amount">70만원/년</div>
+        <div class="period">정부기여금 포함</div>
+        <div style="margin-top:10px;"><span class="badge badge-blue">조건 확인 필요</span></div>
+      </div>
+      <div class="port-grid-card">
+        <div class="icon">🎓</div>
+        <h4>청년 취업아카데미</h4>
+        <div class="amount">150만원</div>
+        <div class="period">교육비 + 수당</div>
+        <div style="margin-top:10px;"><span class="badge badge-blue">조건 확인 필요</span></div>
+      </div>
+      <div class="port-grid-card" style="background:var(--gray-50);border-style:dashed;cursor:pointer;" onclick="alert('더 많은 정책을 분석합니다!')">
+        <div class="icon">➕</div>
+        <h4 style="color:var(--gray-500);">정책 더 추가하기</h4>
+        <div class="amount" style="color:var(--gray-300);font-size:14px">최대 12개까지</div>
+        <div class="period" style="color:var(--gray-400)">분석 가능</div>
+      </div>
+    </div>
+
+    <div class="cta-section">
+      <div class="cta-text">
+        <h3>🚀 이 조합으로 지금 바로 신청하세요!</h3>
+        <p>총 1,040만원 혜택을 한 번에 챙길 수 있어요</p>
+      </div>
+      <button class="cta-btn" onclick="showTab('apply')">
+        📋 신청 보조 시작하기 <span>›</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══ APPLY SCREEN ═══ -->
+  <div class="screen" id="screen-apply">
+
+    <!-- Progress flow -->
+    <div class="flow-steps">
+      <div class="flow-step done">
+        <div class="num">✓</div>
+        <span class="label">정보 입력</span>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step done">
+        <div class="num">✓</div>
+        <span class="label">AI 분석</span>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step done">
+        <div class="num">✓</div>
+        <span class="label">원인 파악</span>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step active">
+        <div class="num">4</div>
+        <span class="label">서류 준비</span>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">
+        <div class="num">5</div>
+        <span class="label">신청 완료</span>
+      </div>
+    </div>
+
+    <div class="grid-main">
+      <div>
+        <div class="section-title">
+          <h3>📄 필요 서류 카드</h3>
+          <span style="font-size:13px;color:var(--gray-500);">청년 월세 지원 기준</span>
+        </div>
+
+        <div class="doc-cards">
+          <div class="doc-card ready">
+            <div class="doc-icon">🪪</div>
+            <div class="doc-info">
+              <h5>주민등록등본</h5>
+              <p>✅ 준비 완료 · 3개월 이내</p>
+            </div>
+            <div class="doc-status">✅</div>
+          </div>
+          <div class="doc-card ready">
+            <div class="doc-icon">💰</div>
+            <div class="doc-info">
+              <h5>소득 증빙서류</h5>
+              <p>✅ 건강보험료 납부확인서</p>
+            </div>
+            <div class="doc-status">✅</div>
+          </div>
+          <div class="doc-card" onclick="this.classList.add('ready');this.querySelector('.doc-status').textContent='✅';this.querySelector('.doc-info p').textContent='✅ 준비 완료'">
+            <div class="doc-icon">🏠</div>
+            <div class="doc-info">
+              <h5>임대차 계약서</h5>
+              <p>⬜ 미준비 · 원본 + 사본</p>
+            </div>
+            <div class="doc-status">⬜</div>
+          </div>
+          <div class="doc-card" onclick="this.classList.add('ready');this.querySelector('.doc-status').textContent='✅';this.querySelector('.doc-info p').textContent='✅ 준비 완료'">
+            <div class="doc-icon">🏦</div>
+            <div class="doc-info">
+              <h5>통장 사본</h5>
+              <p>⬜ 미준비 · 수급 계좌</p>
+            </div>
+            <div class="doc-status">⬜</div>
+          </div>
+        </div>
+
+        <div style="margin-bottom:24px;">
+          <div class="section-title">
+            <h3>☑️ 신청 체크리스트</h3>
+          </div>
+          <div class="input-card" style="padding:20px 24px;">
+            <div class="checklist">
+              <div class="check-item done" onclick="toggleCheck(this)">
+                <div class="check-box">✓</div>
+                <span class="check-text">신청자 기본 정보 입력 완료</span>
+              </div>
+              <div class="check-item done" onclick="toggleCheck(this)">
+                <div class="check-box">✓</div>
+                <span class="check-text">소득 증빙서류 제출</span>
+              </div>
+              <div class="check-item done" onclick="toggleCheck(this)">
+                <div class="check-box">✓</div>
+                <span class="check-text">주민등록 전입신고 확인</span>
+              </div>
+              <div class="check-item" onclick="toggleCheck(this)">
+                <div class="check-box"></div>
+                <span class="check-text">임대차 계약서 업로드</span>
+              </div>
+              <div class="check-item" onclick="toggleCheck(this)">
+                <div class="check-box"></div>
+                <span class="check-text">수급 계좌 등록</span>
+              </div>
+              <div class="check-item" onclick="toggleCheck(this)">
+                <div class="check-box"></div>
+                <span class="check-text">신청서 최종 제출</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="cta-section">
+          <div class="cta-text">
+            <h3>🏠 청년 월세 지원 신청하기</h3>
+            <p>복지로(bokjiro.go.kr)에서 3분 만에 완료</p>
+          </div>
+          <button class="cta-btn">
+            🚀 신청하러 가기
+          </button>
+        </div>
+      </div>
+
+      <div class="sidebar">
+        <div class="sidebar-card">
+          <h4>📊 신청 현황</h4>
+          <div class="stat-grid">
+            <div class="stat-item"><div class="val green">3/6</div><div class="lbl">서류 준비</div></div>
+            <div class="stat-item"><div class="val blue">50%</div><div class="lbl">진행률</div></div>
+          </div>
+          <div style="margin-top:12px;">
+            <div class="progress-track" style="height:10px;">
+              <div class="progress-fill blue" style="width:50%"></div>
+            </div>
+            <p style="font-size:11px;color:var(--gray-500);margin-top:6px;text-align:center;">서류 2개 더 준비하면 신청 가능!</p>
+          </div>
+        </div>
+
+        <div class="sidebar-card">
+          <h4>💡 신청 팁</h4>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div style="background:var(--blue-light);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--blue-dark);font-weight:500;line-height:1.5;">
+              📅 <strong>신청 기한:</strong> 2025년 12월 31일까지 접수 마감
+            </div>
+            <div style="background:var(--green-light);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--green-dark);font-weight:500;line-height:1.5;">
+              ⚡ <strong>빠른 처리:</strong> 온라인 신청 시 처리 기간 단축 (평균 18일)
+            </div>
+            <div style="background:var(--orange-light);border-radius:8px;padding:10px 12px;font-size:12px;color:#B7770D;font-weight:500;line-height:1.5;">
+              ⚠️ <strong>주의:</strong> 전입신고 없으면 100% 탈락. 반드시 사전 완료 필수!
+            </div>
+          </div>
+        </div>
+
+        <div class="ad-card" style="background:linear-gradient(135deg,#2ECC71,#1A9E57);">
+          <div class="ad-tag">SPONSORED</div>
+          <h4>📱 정부24 공식 앱</h4>
+          <p>모든 정부 서비스를 한 곳에서 신청하세요</p>
+          <button class="ad-btn">앱 다운로드 →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ COMMUNITY SCREEN ═══ -->
+  <div class="screen" id="screen-community">
+
+    <div id="comm-list-view">
+      <div class="comm-header">
+        <div>
+          <h2>💬 커뮤니티</h2>
+          <p>베네픽 사용자들의 수급 후기, 질문, 지역 정보를 나눠요</p>
+        </div>
+      </div>
+
+      <div class="comm-filter-bar">
+        <button class="comm-filter-btn active" onclick="filterComm('all', this)">🔥 전체</button>
+        <button class="comm-filter-btn" onclick="filterComm('popular', this)">⭐ 인기글</button>
+        <button class="comm-filter-btn" onclick="filterComm('qna', this)">❓ 질문/답변</button>
+        <button class="comm-filter-btn" onclick="filterComm('review', this)">🎉 수급 후기</button>
+        <button class="comm-filter-btn" onclick="filterComm('regional', this)">📍 지역 정보</button>
+        <button class="comm-filter-btn" onclick="filterComm('anonymous', this)">🤫 익명 고민</button>
+      </div>
+
+      <div class="comm-layout">
+        <div>
+          <div class="comm-post-list" id="commPostList"></div>
+          <div class="comm-empty" id="commEmpty" style="display:none;">
+            <div class="icon">📭</div>
+            <h4>아직 게시글이 없어요</h4>
+            <p>첫 번째 글을 작성해 보세요!</p>
+          </div>
+        </div>
+        <div class="comm-sidebar">
+
+          <!-- 실시간 정책 인사이트 위젯 -->
+          <div class="insight-widget">
+            <div class="insight-widget-header">
+              <div class="insight-widget-title">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#4A90E2" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                실시간 정책 인사이트
+              </div>
+              <button class="insight-refresh-btn" onclick="insightRefresh()">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                새로고침
+              </button>
+            </div>
+            <div class="insight-section-label">이번 주 가장 많이 조회된 정책 TOP 3</div>
+            <div class="insight-policy-row">
+              <div class="insight-policy-meta">
+                <span class="insight-policy-name">청년 월세 지원</span>
+                <span class="insight-policy-pct">85%</span>
+              </div>
+              <div class="insight-bar-track"><div class="insight-bar-fill" id="iBar1" style="width:0%"></div></div>
+            </div>
+            <div class="insight-policy-row">
+              <div class="insight-policy-meta">
+                <span class="insight-policy-name">중소기업 소득세 감면</span>
+                <span class="insight-policy-pct">62%</span>
+              </div>
+              <div class="insight-bar-track"><div class="insight-bar-fill" id="iBar2" style="width:0%"></div></div>
+            </div>
+            <div class="insight-policy-row">
+              <div class="insight-policy-meta">
+                <span class="insight-policy-name">내일배움카드</span>
+                <span class="insight-policy-pct">45%</span>
+              </div>
+              <div class="insight-bar-track"><div class="insight-bar-fill" id="iBar3" style="width:0%"></div></div>
+            </div>
+            <div class="insight-stats-row">
+              <div class="insight-stat-chip"><div class="val" id="iStatPosts">6</div><div class="lbl">총 게시글</div></div>
+              <div class="insight-stat-chip"><div class="val" id="iStatLikes">219</div><div class="lbl">누적 좋아요</div></div>
+              <div class="insight-stat-chip"><div class="val">98%</div><div class="lbl">긍정 후기율</div></div>
+            </div>
+            <div class="insight-divider"></div>
+            <div class="insight-review-header">
+              <div class="insight-review-label">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4A90E2" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                실제 수급자 한줄평
+              </div>
+              <span class="insight-badge-positive">긍정 98%</span>
+            </div>
+            <div id="iReviewList"></div>
+            <div class="insight-nav-dots" id="iNavDots"></div>
+          </div>
+
+          <div class="comm-sidebar-card">
+            <h4>🔥 주간 인기글</h4>
+            <div id="hotPostList"></div>
+          </div>
+          <div class="comm-sidebar-card" style="background:var(--blue-light);border-color:transparent;">
+            <h4 style="color:var(--blue-dark);">💡 AI 복지 팁</h4>
+            <p style="font-size:12px;color:var(--blue-dark);line-height:1.7;" id="aiTip">로딩 중...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 상세 보기 -->
+    <div id="comm-detail-view" style="display:none;">
+      <div class="comm-detail-back">
+        <button onclick="showCommList()">← 목록으로</button>
+        <span style="font-size:13px;color:var(--gray-500);">/ 게시글 상세</span>
+      </div>
+      <div class="comm-layout">
+        <div>
+          <div class="comm-detail-card" id="commDetailCard">
+            <!-- 동적으로 삽입됨 -->
+          </div>
+        </div>
+        <div class="comm-sidebar">
+          <div class="comm-sidebar-card">
+            <h4>🔥 다른 인기글도 보기</h4>
+            <div id="hotPostList2"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div><!-- /container -->
+
+<!-- FAB -->
+<button class="fab-write" id="fabWrite" onclick="openWriteModal()">✏️ 글쓰기</button>
+
+<!-- 글쓰기 모달 -->
+<div class="comm-modal-bg" id="writeModalBg" onclick="closeWriteModal(event)">
+  <div class="comm-modal">
+    <h3>✏️ 새 글 작성</h3>
+    <label>카테고리</label>
+    <select id="modalCat">
+      <option value="qna">❓ 질문/답변</option>
+      <option value="review">🎉 수급 후기</option>
+      <option value="regional">📍 지역 정보</option>
+      <option value="anonymous">🤫 익명 고민</option>
+    </select>
+    <label>지역 태그 (선택)</label>
+    <input type="text" id="modalRegion" placeholder="예: 서울 강남구, 부산 해운대구" />
+    <label>제목</label>
+    <input type="text" id="modalTitle" placeholder="제목을 입력하세요" maxlength="80" />
+    <label>내용</label>
+    <textarea id="modalContent" rows="6" placeholder="내용을 입력하세요. 복지 혜택과 관련된 경험이나 질문을 공유해 주세요!"></textarea>
+    <div class="comm-modal-actions">
+      <button class="btn-cancel" onclick="closeWriteModalDirect()">취소</button>
+      <button class="btn-primary" onclick="submitPost()">등록하기</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function showTab(tab) {
+  // Update screens
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + tab).classList.add('active');
+
+  // Update tabs
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  const tabEl = document.getElementById('tab-' + tab);
+  if (tabEl) tabEl.classList.add('active');
+
+  // detail-panel visibility: detail 탭일 때만 visible
+  const detailPanel = document.querySelector('.detail-panel');
+  if (detailPanel) {
+    if (tab === 'detail') detailPanel.classList.add('visible');
+    else detailPanel.classList.remove('visible');
+  }
+
+  // 포트폴리오 탭 전환 시 자동 로드
+  if (tab === 'portfolio') loadPortfolio();
+
+  // FAB visibility
+  const fab = document.getElementById('fabWrite');
+  if (tab === 'community') {
+    fab.classList.add('visible');
+    renderCommPosts();
+    // sync insight widget stats
+    const p = document.getElementById('iStatPosts');
+    const l = document.getElementById('iStatLikes');
+    if(p) p.textContent = commPosts.length;
+    if(l) l.textContent = commPosts.reduce((s,post) => s + post.likes, 0);
+    insightAnimateBars();
+  } else {
+    fab.classList.remove('visible');
+  }
+
+  // Scroll to top
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ══════════════════════════════════════════════════════════════
+// 베네픽 API 클라이언트 v2.1
+// ══════════════════════════════════════════════════════════════
+
+const API_BASE = 'http://localhost:8000';  // FastAPI 서버 주소
+
+// 현재 분석 세션
+let _currentQueryId = null;
+let _currentPortfolio = [];  // GPT 분석 결과 캐시
+
+// ── API 공통 fetch 래퍼 ───────────────────────────────────────
+async function apiFetch(path, options = {}) {
+  const res = await fetch(API_BASE + path, {
+    headers: { 'Content-Type': 'application/json' },
+    ...options,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err?.detail?.message || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+// ── 에러 토스트 ───────────────────────────────────────────────
+function showToast(msg, type = 'error') {
+  const toast = document.createElement('div');
+  toast.style.cssText = `
+    position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+    background:${type === 'error' ? '#E74C3C' : '#2ECC71'};
+    color:#fff;padding:12px 24px;border-radius:12px;font-size:14px;
+    font-weight:600;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.2);
+  `;
+  toast.textContent = msg;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 3500);
+}
+
+// ── 입력 폼에서 사용자 데이터 수집 ──────────────────────────
+function collectFormData() {
+  const ageVal        = document.getElementById('sel-age')?.value        || '만 27세';
+  const regionVal     = document.getElementById('sel-region')?.value     || '서울특별시';
+  const incomeVal     = document.getElementById('sel-income')?.value     || '중위소득 50~60%';
+  const familyVal     = document.getElementById('sel-family')?.value     || '1인 가구';
+  const empVal        = document.getElementById('sel-employment')?.value || '미취업';
+  const disabilityVal = document.getElementById('sel-disability')?.value || '없음';
+
+  // ── 나이 파싱: "만 27세" / "만 65세 이상" → 숫자
+  const ageMatch = ageVal.match(/\d+/);
+  const age = ageMatch ? parseInt(ageMatch[0]) : 27;
+
+  // ── 소득 파싱 → income_percent
+  let income_percent = 55;
+  const rangeMatch  = incomeVal.match(/(\d+)[~\-](\d+)/);
+  const singleMatch = incomeVal.match(/(\d+)%\s*(이하|초과)/);
+  if (rangeMatch) {
+    income_percent = Math.round((parseInt(rangeMatch[1]) + parseInt(rangeMatch[2])) / 2);
+  } else if (singleMatch) {
+    income_percent = singleMatch[2] === '이하'
+      ? Math.round(parseInt(singleMatch[1]) * 0.7)
+      : parseInt(singleMatch[1]) + 10;
+  }
+
+  // ── 가구원수 추정
+  const sizeMap = {
+    '1인 가구':1, '2인 가구':2, '3인 가구':3, '4인 이상 가구':4,
+    '한부모 가구':2, '다자녀 가구':4, '다문화 가구':3,
+    '조손 가구':2, '노인 단독 가구':1,
+  };
+  const household_size = sizeMap[familyVal] || 1;
+
+  // ── 취업상태 → scoring.py 호환
+  const empMap = {
+    '미취업':                     '구직자 (실업)',
+    '취업자 (정규직)':             '취업자 (정규직)',
+    '취업자 (비정규직/계약직)':    '취업자 (비정규직/계약직)',
+    '자영업자':                    '자영업자',
+    '구직자 (실업)':               '구직자 (실업)',
+    '학생':                        '학생',
+    '육아휴직 중':                 '육아휴직 중',
+    '무직':                        '무직',
+  };
+
+  // ── 다문화가구 여부 (가구유형에서 자동 판단)
+  const multicultural = familyVal === '다문화 가구';
+
+  // ── scoring.py 6개 항목과 완전 일치하는 payload
+  return {
+    user_name:         document.querySelector('.avatar-name')?.textContent?.replace('님','') || '사용자',
+    age,                                          // → 나이
+    region:            regionVal,                 // → 거주지역
+    income_percent,                               // → 연소득 (중위소득 % 환산)
+    household_type:    familyVal,                 // → 가구유형
+    household_size,                               // → 가구원수
+    employment_status: empMap[empVal] || empVal,  // → 고용상태
+    disability:        disabilityVal,             // → 장애여부 ← 새로 추가
+    veteran:           false,
+    multicultural,
+    education_level:   '대졸',
+    language:          'ko',
+  };
+}
+
+// ── 대시보드 렌더링 ───────────────────────────────────────────
+function renderDashboard(data) {
+  const { user_profile, recommendation_cards, dashboard_stats, portfolio_preview, summary } = data;
+
+  // 사용자 프로필
+  const profileH2 = document.querySelector('.profile-info h2');
+  if (profileH2) profileH2.textContent = `${user_profile.user_name}님의 복지 분석`;
+
+  const profileP = document.querySelector('.profile-info p');
+  if (profileP) profileP.textContent = `마지막 업데이트: ${user_profile.updated_at_label} · ${user_profile.region_label}`;
+
+  const scoreNum = document.querySelector('.score-num');
+  if (scoreNum) scoreNum.textContent = user_profile.total_score;
+
+  const tagsEl = document.querySelector('.profile-tags');
+  if (tagsEl) {
+    tagsEl.innerHTML = user_profile.tags
+      .map(t => `<span class="profile-tag">${t}</span>`)
+      .join('');
+  }
+
+  // 정책 카드 목록
+  const policyList = document.querySelector('.policy-list');
+  if (policyList && recommendation_cards.length) {
+    policyList.innerHTML = recommendation_cards.map(card => {
+      const css = card._css || {};
+      const pct = card.eligibility_percent;
+      const barColor = css.progress_color || 'blue';
+      return `
+        <div class="policy-card ${css.card_class || 'mid'}" onclick="showDetail('${card.policy_id}')">
+          <div class="policy-top-row">
+            <div class="policy-left">
+              <div class="policy-icon ${css.icon_color || 'blue'}">${card.icon}</div>
+              <div class="policy-meta">
+                <h4>${card.policy_name}</h4>
+                <p>${card.subtitle}</p>
+                <div class="policy-badges">
+                  <span class="badge ${css.badge_class || 'badge-blue'}">${css.badge_label || ''}</span>
+                  <span class="badge badge-blue">${card.badges?.[1]?.label || 'Gov24'}</span>
+                  <span class="badge badge-gray">${card.benefit_label}</span>
+                </div>
+              </div>
+            </div>
+            <div class="policy-percent">
+              <div class="percent-num ${css.percent_class || 'mid'}">${pct}<span style="font-size:18px">%</span></div>
+              <div class="percent-label">수급 확률</div>
+            </div>
+          </div>
+          <div class="progress-row">
+            <div class="progress-track">
+              <div class="progress-fill ${barColor}" style="width:${pct}%"></div>
+            </div>
+            <div class="benefit-chip">${card.benefit_label}</div>
+          </div>
+          <div class="policy-action">상세 분석 보기 →</div>
+        </div>`;
+    }).join('');
+  }
+
+  // 대시보드 통계
+  const statVals = document.querySelectorAll('.stat-item .val');
+  if (statVals.length >= 4) {
+    statVals[0].textContent = dashboard_stats.matched_policy_count;
+    statVals[1].textContent = dashboard_stats.average_probability_percent + '%';
+    statVals[2].innerHTML   = dashboard_stats.expected_total_benefit_label + '<span style="font-size:14px">만</span>';
+    statVals[3].textContent = dashboard_stats.ready_apply_count;
+  }
+
+  // 포트폴리오 프리뷰
+  const portTotal = document.querySelector('.portfolio-total .amount');
+  if (portTotal) portTotal.textContent = portfolio_preview.total_expected_benefit_label;
+
+  const portItems = document.querySelector('.portfolio-items');
+  if (portItems && portfolio_preview.items.length) {
+    portItems.innerHTML = portfolio_preview.items.map(item => `
+      <div class="port-item">
+        <span class="name">${item.icon} ${item.label}</span>
+        <span class="amt">${item.benefit_label}</span>
+      </div>`).join('');
+  }
+}
+
+// ── 상세 분석 화면 렌더링 ─────────────────────────────────────
+function renderDetail(detailData) {
+  const { policy_header, issues, guides, summary_stats } = detailData;
+  const pct   = policy_header.eligibility_percent;
+  const color = policy_header.progress_color || (pct >= 80 ? 'green' : pct >= 60 ? 'blue' : 'orange');
+
+  // 정책명
+  document.getElementById('detail-policy-name').textContent = policy_header.policy_name;
+
+  // 아이콘
+  const iconEl = document.querySelector('#screen-detail .detail-icon');
+  if (iconEl && policy_header.icon) iconEl.textContent = policy_header.icon;
+
+  // 수급 확률 숫자 + % 색상
+  const pctEl = document.getElementById('detail-pct');
+  if (pctEl) pctEl.textContent = pct;
+  const pctSign = document.querySelector('#screen-detail .detail-prob span[style]');
+  const pctColor = color === 'green' ? 'var(--green)' : color === 'blue' ? 'var(--blue)' : 'var(--orange)';
+  if (pctSign) pctSign.style.color = pctColor;
+
+  // 진행바
+  const bar = document.getElementById('detail-bar');
+  if (bar) {
+    bar.className   = `progress-fill ${color}`;
+    bar.style.width = pct + '%';
+    // 애니메이션
+    bar.style.width = '0';
+    requestAnimationFrame(() => { setTimeout(() => { bar.style.width = pct + '%'; }, 60); });
+  }
+
+  // issue-item 렌더링
+  const issueSection = document.getElementById('detail-issue-section');
+  if (issueSection) {
+    issueSection.innerHTML = `
+      <div class="analysis-label">❌ 탈락 예상 이유</div>
+      ${issues.map(iss => {
+        const icon = iss.icon || '⚠️';
+        const text = typeof iss.html === 'string' ? iss.html : (iss.html?.html || JSON.stringify(iss.html));
+        return `<div class="issue-item"><span class="icon">${icon}</span><p>${text}</p></div>`;
+      }).join('')}
+    `;
+  }
+
+  // guide-item 렌더링
+  const guideSection = document.getElementById('detail-guide-section');
+  if (guideSection) {
+    guideSection.innerHTML = `
+      <div class="analysis-label">💡 해결 방법 &amp; 행동 가이드</div>
+      ${guides.map(g => {
+        const icon = g.icon || '✅';
+        const text = typeof g.html === 'string' ? g.html : (g.html?.html || JSON.stringify(g.html));
+        return `<div class="guide-item"><span class="icon">${icon}</span><p>${text}</p></div>`;
+      }).join('')}
+    `;
+  }
+
+  // 사이드바 통계 (detail 화면)
+  const detailStats = document.querySelectorAll('#screen-detail .stat-item .val');
+  if (detailStats.length >= 4) {
+    detailStats[0].textContent  = pct + '%';
+    detailStats[0].className    = `val ${color}`;
+    detailStats[1].textContent  = summary_stats.benefit_label;
+    detailStats[2].textContent  = summary_stats.processing_period_label;
+    detailStats[3].textContent  = summary_stats.issue_count + '건';
+  }
+}
+
+// ── 정적 정책 데이터 (백엔드 없이도 상세 보기 동작) ─────────
+const _STATIC_DETAIL = {
+  'youth-rent': {
+    policy_header: {
+      policy_name: '청년 월세 한시 특별지원',
+      eligibility_percent: 92,
+      progress_color: 'green',
+      icon: '🏠',
+    },
+    issues: [
+      { icon: '⚠️', html: '<strong>주민등록 전입 미완료:</strong> 현재 거주지 주민등록이 신청 주소와 일치하지 않을 수 있습니다. 서류 심사 시 탈락 요인이 될 수 있습니다.' },
+      { icon: '📋', html: '<strong>임대차 계약서 미비:</strong> 월세 계약 기간이 남은 계약서 원본 및 확정일자가 필요합니다.' },
+    ],
+    guides: [
+      { icon: '✅', html: '<strong>1단계: 전입신고 완료하기</strong> — 거주지 주민센터를 방문하여 현 주소로 전입신고를 진행하세요. 처리 기간: 당일' },
+      { icon: '📎', html: '<strong>2단계: 임대차 계약서 확인</strong> — 계약서에 확정일자 도장이 찍혀 있는지 확인하고, 없다면 주민센터 방문 시 동시에 신청하세요.' },
+      { icon: '🚀', html: '<strong>3단계: 복지로에서 온라인 신청</strong> — 위 서류 준비 후 <a href="https://bokjiro.go.kr" target="_blank" style="color:var(--blue)">bokjiro.go.kr</a>에서 신청서를 제출하세요. 30일 이내 결과를 통보받습니다.' },
+    ],
+    summary_stats: { benefit_label: '연 240만원', processing_period_label: '1개월', issue_count: 2, source_label: '국토부' },
+  },
+  'national-card': {
+    policy_header: { policy_name: '국민내일배움카드', eligibility_percent: 85, progress_color: 'green', icon: '📚' },
+    issues: [
+      { icon: '⚠️', html: '<strong>재직자 소득 기준 확인 필요:</strong> 연 소득 5,000만원 초과 대기업 재직자는 지원 대상에서 제외됩니다.' },
+      { icon: '📋', html: '<strong>훈련 기관 선택 필요:</strong> 지정된 직업훈련기관에서만 카드 사용이 가능합니다. 사전 확인 후 신청하세요.' },
+    ],
+    guides: [
+      { icon: '✅', html: '<strong>1단계: 고용24 회원가입</strong> — <a href="https://www.work24.go.kr" target="_blank" style="color:var(--blue)">work24.go.kr</a>에서 회원가입 후 신청 페이지로 이동하세요.' },
+      { icon: '📎', html: '<strong>2단계: 수강 희망 과정 선택</strong> — 직업훈련포털에서 수강 희망 훈련과정을 미리 검색해두세요.' },
+      { icon: '🚀', html: '<strong>3단계: 카드 신청 및 발급</strong> — 신청 승인 후 카드 수령까지 약 2주 소요됩니다. 국민은행 또는 우리은행으로 발급됩니다.' },
+    ],
+    summary_stats: { benefit_label: '최대 500만원', processing_period_label: '2주', issue_count: 2, source_label: '고용부' },
+  },
+  'youth-employment': {
+    policy_header: { policy_name: '청년도약계좌', eligibility_percent: 78, progress_color: 'blue', icon: '💼' },
+    issues: [
+      { icon: '⚠️', html: '<strong>소득 기준 재확인 필요:</strong> 개인소득 6,000만원 이하, 가구소득 중위 180% 이하 조건을 모두 충족해야 합니다.' },
+      { icon: '🔎', html: '<strong>5년 유지 의무:</strong> 중도 해지 시 정부기여금 및 비과세 혜택이 소멸됩니다. 장기 납입 계획 수립이 필요합니다.' },
+    ],
+    guides: [
+      { icon: '✅', html: '<strong>1단계: 가입 자격 셀프 체크</strong> — 소득 기준(개인·가구 모두)과 나이(만 19~34세) 조건을 사전에 확인하세요.' },
+      { icon: '📎', html: '<strong>2단계: 은행 앱에서 신청</strong> — 취급 은행(국민·신한·하나·우리 등) 앱에서 비대면으로 신청 가능합니다.' },
+      { icon: '🚀', html: '<strong>3단계: 매월 40~70만원 납입</strong> — 월 최대 70만원 납입 시 정부기여금 최대 6%를 추가로 받을 수 있습니다.' },
+    ],
+    summary_stats: { benefit_label: '최대 5,000만원', processing_period_label: '5년 만기', issue_count: 2, source_label: '금융위' },
+  },
+  'health': {
+    policy_header: { policy_name: '청년 마음건강 지원사업', eligibility_percent: 74, progress_color: 'blue', icon: '🏥' },
+    issues: [
+      { icon: '⚠️', html: '<strong>지역별 바우처 공급량 제한:</strong> 거주 지역에 따라 제공 가능한 상담사 및 기관 수가 다릅니다. 조기 신청을 권장합니다.' },
+      { icon: '📌', html: '<strong>연 10회 한도:</strong> 회기당 50분 기준이며, 잔여 회기는 다음 연도로 이월되지 않습니다.' },
+    ],
+    guides: [
+      { icon: '✅', html: '<strong>1단계: 거주지 주민센터 방문 신청</strong> — 신분증 지참 후 복지 담당자에게 청년 마음건강 바우처 신청 의사를 밝히세요.' },
+      { icon: '📎', html: '<strong>2단계: 상담 기관 선택</strong> — 정신건강복지센터 또는 지정 민간 상담 기관 중 선택 가능합니다.' },
+      { icon: '🚀', html: '<strong>3단계: 상담 예약 및 이용</strong> — 바우처 카드 수령 후 지정 기관에서 상담 예약을 진행하세요. 본인부담금은 회당 3,000원입니다.' },
+    ],
+    summary_stats: { benefit_label: '연 80만원 상당', processing_period_label: '상시', issue_count: 2, source_label: '복지부' },
+  },
+  'startup': {
+    policy_header: { policy_name: '청년창업사관학교', eligibility_percent: 41, progress_color: 'orange', icon: '🚀' },
+    issues: [
+      { icon: '❗', html: '<strong>사업계획서 준비 미흡:</strong> 서류 심사 + 발표 심사 2단계로 진행되며, 구체적인 매출 계획과 시장 분석이 필수입니다.' },
+      { icon: '⚠️', html: '<strong>창업 아이템 구체성 부족:</strong> 단순 아이디어 수준이 아닌, MVP(최소 기능 제품) 또는 프로토타입이 있을 경우 합격률이 크게 높아집니다.' },
+      { icon: '🔎', html: '<strong>경쟁률 높음:</strong> 연간 선발 인원이 제한되어 있어 평균 경쟁률이 5:1 이상입니다.' },
+    ],
+    guides: [
+      { icon: '✅', html: '<strong>1단계: 창업 아이템 구체화</strong> — 문제 정의 → 솔루션 → 목표 시장 → 수익 모델 순서로 사업계획서의 뼈대를 작성하세요.' },
+      { icon: '📎', html: '<strong>2단계: K-스타트업 포털에서 공고 확인</strong> — <a href="https://www.k-startup.go.kr" target="_blank" style="color:var(--blue)">k-startup.go.kr</a>에서 모집 일정과 지원 자격을 확인하세요.' },
+      { icon: '🚀', html: '<strong>3단계: 서류·면접 준비</strong> — 사전에 창업진흥원 무료 컨설팅(창업 교육 프로그램)을 받으면 합격률이 올라갑니다.' },
+    ],
+    summary_stats: { benefit_label: '최대 1억원', processing_period_label: '1년', issue_count: 3, source_label: '중기부' },
+  },
+};
+
+// ── showDetail: 정적 fallback + API 병행 ─────────────────────
+async function showDetail(policyId) {
+  showTab('detail');
+
+  // 1) 정적 데이터로 즉시 렌더링 (카드 클릭 즉시 반응)
+  const staticData = _STATIC_DETAIL[policyId] || _makeFallbackDetail(policyId);
+  renderDetail({ ...staticData, _isStatic: true });
+
+  // 2) 백엔드 세션이 있으면 실제 API 데이터로 덮어씀
+  if (!_currentQueryId) return;
+
+  const nameEl = document.getElementById('detail-policy-name');
+  if (nameEl) nameEl.dataset.loading = '1';
+
+  try {
+    const res = await apiFetch(`/policy/${policyId}/detail?query_id=${_currentQueryId}`);
+    renderDetail(res.detail_data);
+  } catch (e) {
+    // API 실패해도 이미 정적 데이터가 표시 중이므로 토스트만
+    showToast('AI 상세 분석을 불러오지 못했습니다. 기본 정보를 표시합니다.', 'error');
+  }
+}
+
+// 정적 데이터에 없는 policy_id용 최소 fallback 생성
+function _makeFallbackDetail(policyId) {
+  // _currentPortfolio에서 카드 찾기 (runAnalysis 이후라면 존재)
+  const card = _currentPortfolio.find(c => c.policy_id === policyId);
+  const pct  = card?.eligibility_percent ?? 60;
+  const color = pct >= 80 ? 'green' : pct >= 60 ? 'blue' : 'orange';
+  return {
+    policy_header: {
+      policy_name:           card?.policy_name ?? policyId,
+      eligibility_percent:   pct,
+      progress_color:        color,
+      icon:                  card?.icon ?? '📋',
+    },
+    issues: [
+      { icon: '⚠️', html: '<strong>조건 확인 필요:</strong> AI 분석 버튼을 눌러 상세 수급 가능성을 확인하세요.' },
+    ],
+    guides: [
+      { icon: '✅', html: '<strong>1단계: AI 분석 실행</strong> — 대시보드 상단의 "수급 가능성 AI 분석 시작하기" 버튼을 누르세요.' },
+      { icon: '📎', html: '<strong>2단계: 정책 상세 확인</strong> — <a href="https://www.bokjiro.go.kr" target="_blank" style="color:var(--blue)">복지로(bokjiro.go.kr)</a>에서 해당 정책을 직접 검색해보세요.' },
+    ],
+    summary_stats: {
+      benefit_label:           card?.benefit_label ?? '-',
+      processing_period_label: '확인 필요',
+      issue_count:             1,
+      source_label:            card?.source_label ?? 'Gov24',
+    },
+  };
+}
+
+// ── 포트폴리오 화면 렌더링 ────────────────────────────────────
+async function loadPortfolio() {
+  // ── 백엔드 없을 때 정적 fallback 즉시 렌더링 ─────────────
+  if (!_currentQueryId) {
+    _renderPortfolioStatic();
+    return;
+  }
+
+  try {
+    const res  = await apiFetch(`/portfolio/${_currentQueryId}`);
+    const data = res.portfolio_data;
+    _renderPortfolioData(data);
+  } catch(e) {
+    showToast('포트폴리오를 불러오지 못했습니다: ' + e.message);
+    _renderPortfolioStatic();
+  }
+}
+
+function _renderPortfolioData(data) {
+  const hero = data.portfolio_hero;
+
+  // hero 총 수혜액
+  const bigNum = document.querySelector('.portfolio-hero .big-num');
+  if (bigNum) bigNum.textContent = hero.total_expected_benefit_label;
+
+  // hero 설명 p 태그 (두 번째 p)
+  const heroPs = document.querySelectorAll('.portfolio-hero p');
+  if (heroPs.length >= 2) heroPs[1].textContent = hero.portfolio_basis_label;
+  else if (heroPs.length === 1) heroPs[0].textContent = hero.portfolio_basis_label;
+
+  // hero 배지: 즉시 신청 N건 / 조건 보완 후 M건
+  const heroBadges = document.querySelectorAll('.portfolio-hero span');
+  if (heroBadges.length >= 2) {
+    heroBadges[0].textContent = `✅ 즉시 신청 가능 ${hero.ready_count}건`;
+    heroBadges[1].textContent = `⚡ 조건 보완 후 ${hero.conditional_count}건`;
+  }
+
+  // port-grid 카드 렌더링
+  const portGrid = document.querySelector('.port-grid');
+  if (portGrid) {
+    const statusBadge = s =>
+      s === 'ready'       ? '<span class="badge badge-green">즉시 신청</span>' :
+      s === 'conditional' ? '<span class="badge badge-blue">조건 확인 필요</span>' :
+                            '<span class="badge badge-orange">조건 부족</span>';
+
+    const cards = data.portfolio_items.map(item => `
+      <div class="port-grid-card" onclick="showDetail('${item.policy_id}')" style="cursor:pointer;">
+        <div class="icon">${item.icon}</div>
+        <h4>${item.policy_name}</h4>
+        <div class="amount">${item.expected_benefit_label}</div>
+        <div class="period">${item.benefit_period_label}</div>
+        <div style="margin-top:10px;">${statusBadge(item.status)}</div>
+      </div>`).join('');
+
+    // 마지막에 "정책 더 추가하기" 카드 유지
+    portGrid.innerHTML = cards + `
+      <div class="port-grid-card" style="background:var(--gray-50);border-style:dashed;cursor:pointer;" onclick="showTab('dashboard')">
+        <div class="icon">➕</div>
+        <h4 style="color:var(--gray-500);">정책 더 보기</h4>
+        <div class="amount" style="color:var(--gray-300);font-size:14px">대시보드로 이동</div>
+        <div class="period" style="color:var(--gray-400)">전체 목록 확인</div>
+      </div>`;
+  }
+
+  // CTA 섹션
+  const ctaH3 = document.querySelector('.cta-text h3');
+  const ctaP  = document.querySelector('.cta-text p');
+  if (ctaH3) ctaH3.textContent = data.portfolio_cta.headline;
+  if (ctaP)  ctaP.textContent  = data.portfolio_cta.description;
+}
+
+// 백엔드 없을 때 하드코딩 정적 화면 유지 (기존 HTML 그대로)
+function _renderPortfolioStatic() {
+  // runAnalysis 후 _currentPortfolio 캐시가 있으면 그걸로 렌더링
+  if (_currentPortfolio && _currentPortfolio.length > 0) {
+    const statusBadge = s =>
+      s === 'ready'       ? '<span class="badge badge-green">즉시 신청</span>' :
+      s === 'conditional' ? '<span class="badge badge-blue">조건 확인 필요</span>' :
+                            '<span class="badge badge-orange">조건 부족</span>';
+
+    const portGrid = document.querySelector('.port-grid');
+    if (portGrid) {
+      const cards = _currentPortfolio.map(card => {
+        const score  = card.eligibility_percent;
+        const status = score >= 80 ? 'ready' : score >= 60 ? 'conditional' : 'blocked';
+        return `
+          <div class="port-grid-card" onclick="showDetail('${card.policy_id}')" style="cursor:pointer;">
+            <div class="icon">${card.icon}</div>
+            <h4>${card.policy_name}</h4>
+            <div class="amount">${card.benefit_label}</div>
+            <div class="period">${card.subtitle || '-'}</div>
+            <div style="margin-top:10px;">${statusBadge(status)}</div>
+          </div>`;
+      }).join('');
+      portGrid.innerHTML = cards + `
+        <div class="port-grid-card" style="background:var(--gray-50);border-style:dashed;cursor:pointer;" onclick="showTab('dashboard')">
+          <div class="icon">➕</div>
+          <h4 style="color:var(--gray-500);">정책 더 보기</h4>
+          <div class="amount" style="color:var(--gray-300);font-size:14px">대시보드로 이동</div>
+          <div class="period" style="color:var(--gray-400)">전체 목록 확인</div>
+        </div>`;
+    }
+  }
+  // 정적 HTML 카드는 그대로 두고 아무것도 안 함
+}
+
+// ── runAnalysis: API 호출로 교체 ─────────────────────────────
+async function runAnalysis() {
+  const overlay = document.getElementById('aiLoading');
+  overlay.classList.add('show');
+
+  try {
+    const payload = collectFormData();
+    const data    = await apiFetch('/analyze', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+
+    _currentQueryId  = data.query_id;
+    _currentPortfolio = data.dashboard_data.recommendation_cards || [];
+
+    renderDashboard(data.dashboard_data);
+
+    // 진행바 재애니메이션
+    document.querySelectorAll('.progress-fill').forEach(bar => {
+      const w = bar.style.width;
+      bar.style.width = '0';
+      setTimeout(() => { bar.style.width = w; }, 100);
+    });
+
+    showToast('분석이 완료되었습니다! ✅', 'success');
+
+  } catch (e) {
+    showToast('분석 실패: ' + e.message);
+    console.error('runAnalysis error:', e);
+  } finally {
+    overlay.classList.remove('show');
+  }
+}
+
+
+
+function toggleCheck(el) {
+  el.classList.toggle('done');
+  const box = el.querySelector('.check-box');
+  box.textContent = el.classList.contains('done') ? '✓' : '';
+}
+
+// ── COMMUNITY MODULE ──
+const CAT_LABELS = {
+  popular: { label: '⭐ 인기글', cls: 'cat-popular' },
+  qna:     { label: '❓ 질문',   cls: 'cat-qna' },
+  review:  { label: '🎉 후기',   cls: 'cat-review' },
+  regional:{ label: '📍 지역',   cls: 'cat-regional' },
+  anonymous:{ label:'🤫 익명',   cls: 'cat-anonymous' },
+  notice:  { label: '📢 공지',   cls: 'cat-notice' },
+};
+
+const SAMPLE_POSTS = [
+  { id: 1, category: 'notice', title: '베네픽 커뮤니티 오픈 안내 🎉', content: '안녕하세요, 베네픽 팀입니다.\n드디어 복지 커뮤니티가 오픈되었습니다!\n\n수급 후기, 질문, 지역 정보 등 다양한 이야기를 나눠주세요.\n서로의 경험을 공유하면 더 많은 분들이 도움을 받을 수 있어요. 🙌', author: '베네픽팀', date: '2025-01-10', likes: 34, region: '' },
+  { id: 2, category: 'review', title: '청년 월세 지원 드디어 받았어요!! 월 20만원 ㅠㅠ', content: '안녕하세요 서울 은평구에 사는 25살 취준생이에요.\n베네픽으로 수급 확률 92%라고 나와서 반신반의 하면서 신청했는데\n진짜로 승인됐습니다!!!\n\n전입신고 꼭 미리 해두셔야 해요. 저는 그거 때문에 한번 탈락했다가 다시 신청했거든요.\n다들 파이팅!', author: '은평구청년', date: '2025-01-12', likes: 87, region: '서울 은평구' },
+  { id: 3, category: 'qna', title: '국민내일배움카드 소득 기준이 어떻게 되나요?', content: '안녕하세요! 취업준비 중인 28살입니다.\n베네픽에서 배움카드 수급 확률이 85%로 나왔는데\n혹시 소득 기준이 정확히 어떻게 되는지 아시는 분 계신가요?\n알바 수입이 있는데 괜찮을지 걱정돼서요.', author: '취준생_희망', date: '2025-01-13', likes: 12, region: '' },
+  { id: 4, category: 'regional', title: '부산 해운대구 청년지원센터 정보 공유해요', content: '부산 해운대구 거주 청년분들!\n해운대구 청년지원센터에서 별도 복지 상담을 무료로 해줍니다.\n주소: 해운대구청 3층\n운영시간: 평일 09:00-18:00\n\n베네픽이랑 같이 활용하면 진짜 많은 혜택 받을 수 있어요!', author: '해운대청년', date: '2025-01-14', likes: 31, region: '부산 해운대구' },
+  { id: 5, category: 'anonymous', title: '복지 신청이 창피한 것 같아서 망설이고 있어요...', content: '주변에서 "너 그런 거 받아도 돼?"라는 시선이 신경 쓰여서\n받을 자격이 있는데도 신청을 못 하고 있어요.\n\n혹시 비슷한 경험 있으신 분 계신가요?\n어떻게 마음을 정리하셨는지 궁금해요.', author: '익명', date: '2025-01-15', likes: 55, region: '' },
+];
+
+let commPosts = [];
+let currentFilter = 'all';
+let currentDetailId = null;
+
+const AI_TIPS = [
+  '💡 청년 월세 지원은 전입신고가 필수! 신청 전 반드시 확인하세요.',
+  '💡 국민내일배움카드는 취업자·재직자 모두 신청 가능합니다.',
+  '💡 복지 혜택은 중복 수령이 가능한 경우가 많아요. 꼭 꼼꼼히 확인하세요!',
+  '💡 청년도약계좌는 매월 70만원 납입 시 정부기여금 최대 6%를 받을 수 있어요.',
+  '💡 마음건강 바우처는 소득과 무관하게 신청 가능합니다.',
+];
+
+function initComm() {
+  const stored = localStorage.getItem('benefic_posts');
+  if (stored) {
+    commPosts = JSON.parse(stored);
+  } else {
+    commPosts = JSON.parse(JSON.stringify(SAMPLE_POSTS));
+    savePosts();
+  }
+  // AI tip rotation
+  const tip = AI_TIPS[Math.floor(Math.random() * AI_TIPS.length)];
+  const tipEl = document.getElementById('aiTip');
+  if (tipEl) tipEl.textContent = tip;
+}
+
+function savePosts() {
+  localStorage.setItem('benefic_posts', JSON.stringify(commPosts));
+}
+
+function getCatInfo(cat) {
+  return CAT_LABELS[cat] || { label: cat, cls: 'cat-qna' };
+}
+
+function timeAgo(dateStr) {
+  const d = new Date(dateStr);
+  const now = new Date();
+  const diff = Math.floor((now - d) / 86400000);
+  if (diff === 0) return '오늘';
+  if (diff === 1) return '어제';
+  if (diff < 7) return diff + '일 전';
+  return dateStr;
+}
+
+function filterComm(cat, btn) {
+  currentFilter = cat;
+  document.querySelectorAll('.comm-filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderCommPosts();
+}
+
+function renderCommPosts() {
+  const listEl = document.getElementById('commPostList');
+  const emptyEl = document.getElementById('commEmpty');
+  if (!listEl) return;
+
+  let filtered = currentFilter === 'all' ? commPosts
+    : currentFilter === 'popular' ? commPosts.filter(p => p.likes >= 20).sort((a,b) => b.likes - a.likes)
+    : commPosts.filter(p => p.category === currentFilter);
+
+  filtered = [...filtered].reverse(); // newest first (for user posts)
+
+  if (filtered.length === 0) {
+    listEl.innerHTML = '';
+    emptyEl.style.display = 'block';
+  } else {
+    emptyEl.style.display = 'none';
+    listEl.innerHTML = filtered.map(post => {
+      const cat = getCatInfo(post.category);
+      return `
+        <div class="comm-post-card" onclick="showCommDetail(${post.id})">
+          <span class="comm-post-cat-badge ${cat.cls}">${cat.label}</span>
+          <div class="comm-post-body">
+            <h4>${escHtml(post.title)}</h4>
+            <p>${escHtml(post.content.substring(0, 80))}${post.content.length > 80 ? '...' : ''}</p>
+            <div class="comm-post-meta">
+              <span class="comm-meta-item author">👤 ${escHtml(post.author)}</span>
+              ${post.region ? `<span class="comm-meta-item">📍 ${escHtml(post.region)}</span>` : ''}
+              <span class="comm-meta-item">🕐 ${timeAgo(post.date)}</span>
+            </div>
+          </div>
+          <div class="comm-post-right">
+            <div class="comm-stats">
+              <span class="comm-stat">❤️ ${post.likes}</span>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  renderHotList('hotPostList');
+  updateStats();
+}
+
+function renderHotList(elId) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  const hot = [...commPosts].sort((a,b) => b.likes - a.likes).slice(0, 5);
+  el.innerHTML = hot.map((p, i) => `
+    <div class="hot-item" onclick="showCommDetail(${p.id})">
+      <span class="hot-num">${i+1}</span>
+      <span class="hot-title">${escHtml(p.title)}</span>
+      <span class="hot-likes">❤️${p.likes}</span>
+    </div>`).join('');
+}
+
+function updateStats() {
+  const today = new Date().toISOString().slice(0,10);
+  document.getElementById('statTotal').textContent = commPosts.length;
+  document.getElementById('statToday').textContent = commPosts.filter(p => p.date === today).length;
+  document.getElementById('statLikes').textContent = commPosts.reduce((s,p) => s + p.likes, 0);
+}
+
+function showCommDetail(id) {
+  currentDetailId = id;
+  const post = commPosts.find(p => p.id === id);
+  if (!post) return;
+  const cat = getCatInfo(post.category);
+  const likedKey = 'liked_' + id;
+  const isLiked = localStorage.getItem(likedKey);
+
+  document.getElementById('commDetailCard').innerHTML = `
+    <div class="comm-detail-meta">
+      <span class="comm-post-cat-badge ${cat.cls}">${cat.label}</span>
+      ${post.region ? `<span class="comm-meta-item">📍 ${escHtml(post.region)}</span>` : ''}
+      <span class="comm-meta-item author">👤 ${escHtml(post.author)}</span>
+      <span class="comm-meta-item">🕐 ${timeAgo(post.date)}</span>
+    </div>
+    <h2>${escHtml(post.title)}</h2>
+    <div class="comm-detail-content">${escHtml(post.content)}</div>
+    <button class="comm-like-btn ${isLiked ? 'liked' : ''}" id="likeBtn" onclick="toggleLike(${id})">
+      ${isLiked ? '❤️' : '🤍'} 좋아요 <span id="likeCount">${post.likes}</span>
+    </button>
+  `;
+
+  renderHotList('hotPostList2');
+  document.getElementById('comm-list-view').style.display = 'none';
+  document.getElementById('comm-detail-view').style.display = 'block';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function showCommList() {
+  document.getElementById('comm-list-view').style.display = 'block';
+  document.getElementById('comm-detail-view').style.display = 'none';
+  renderCommPosts();
+}
+
+function toggleLike(id) {
+  const post = commPosts.find(p => p.id === id);
+  if (!post) return;
+  const likedKey = 'liked_' + id;
+  const isLiked = localStorage.getItem(likedKey);
+  if (isLiked) {
+    post.likes = Math.max(0, post.likes - 1);
+    localStorage.removeItem(likedKey);
+  } else {
+    post.likes += 1;
+    localStorage.setItem(likedKey, '1');
+  }
+  savePosts();
+  showCommDetail(id);
+}
+
+function openWriteModal() {
+  document.getElementById('writeModalBg').classList.add('open');
+  document.getElementById('modalTitle').focus();
+}
+
+function closeWriteModal(e) {
+  if (e.target === document.getElementById('writeModalBg')) closeWriteModalDirect();
+}
+
+function closeWriteModalDirect() {
+  document.getElementById('writeModalBg').classList.remove('open');
+  document.getElementById('modalTitle').value = '';
+  document.getElementById('modalContent').value = '';
+  document.getElementById('modalRegion').value = '';
+}
+
+function submitPost() {
+  const title = document.getElementById('modalTitle').value.trim();
+  const content = document.getElementById('modalContent').value.trim();
+  const cat = document.getElementById('modalCat').value;
+  const region = document.getElementById('modalRegion').value.trim();
+
+  if (!title) { alert('제목을 입력해주세요.'); return; }
+  if (!content) { alert('내용을 입력해주세요.'); return; }
+
+  const newPost = {
+    id: Date.now(),
+    category: cat,
+    title,
+    content,
+    author: '남정현님',
+    date: new Date().toISOString().slice(0,10),
+    likes: 0,
+    region,
+  };
+  commPosts.push(newPost);
+  savePosts();
+  closeWriteModalDirect();
+
+  // show list view if in detail
+  if (document.getElementById('comm-detail-view').style.display !== 'none') {
+    showCommList();
+  } else {
+    currentFilter = 'all';
+    document.querySelectorAll('.comm-filter-btn').forEach((b,i) => {
+      b.classList.toggle('active', i === 0);
+    });
+    renderCommPosts();
+  }
+}
+
+function escHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Init community on page load
+initComm();
+
+// ── INSIGHT WIDGET ──
+const INSIGHT_REVIEWS = [
+  { text: '신청이 생각보다 정말 간편해요!', tag: '#청년월세지원 · 은평구청년' },
+  { text: '서류 준비 팁: 주민등록등본이 핵심!', tag: '#내일배움카드 · 취준생_희망' },
+  { text: '베네픽 덕분에 몰랐던 혜택 발견했어요.', tag: '#소득세감면 · 익명' },
+  { text: '월 20만원 지원 실제로 받았습니다 ㅠㅠ', tag: '#청년월세지원 · 서울청년' },
+  { text: '복지 신청, 당연한 권리예요. 망설이지 마세요!', tag: '#익명고민 · 익명' },
+];
+let insightIdx = 0;
+
+function insightRenderReviews() {
+  const list = document.getElementById('iReviewList');
+  const dots = document.getElementById('iNavDots');
+  if (!list || !dots) return;
+  const r1 = INSIGHT_REVIEWS[insightIdx];
+  const r2 = INSIGHT_REVIEWS[(insightIdx + 1) % INSIGHT_REVIEWS.length];
+  list.innerHTML = [r1, r2].map(r => `
+    <div class="insight-review-item">
+      <div class="insight-review-text">${r.text}</div>
+      <span class="insight-review-tag">${r.tag}</span>
+    </div>`).join('');
+  dots.innerHTML = INSIGHT_REVIEWS.map((_, i) =>
+    `<div class="insight-dot${i === insightIdx ? ' active' : ''}" onclick="insightIdx=${i};insightRenderReviews()"></div>`
+  ).join('');
+}
+
+function insightAnimateBars() {
+  setTimeout(() => { const b = document.getElementById('iBar1'); if(b) b.style.width='85%'; }, 100);
+  setTimeout(() => { const b = document.getElementById('iBar2'); if(b) b.style.width='62%'; }, 250);
+  setTimeout(() => { const b = document.getElementById('iBar3'); if(b) b.style.width='45%'; }, 400);
+}
+
+function insightRefresh() {
+  ['iBar1','iBar2','iBar3'].forEach(id => { const b = document.getElementById(id); if(b) b.style.width='0%'; });
+  setTimeout(insightAnimateBars, 150);
+  insightIdx = (insightIdx + 1) % INSIGHT_REVIEWS.length;
+  insightRenderReviews();
+  const p = document.getElementById('iStatPosts');
+  const l = document.getElementById('iStatLikes');
+  if(p) p.textContent = commPosts.length;
+  if(l) l.textContent = commPosts.reduce((s,p) => s + p.likes, 0);
+}
+
+function insightInit() {
+  insightRenderReviews();
+  insightAnimateBars();
+  setInterval(() => { insightIdx = (insightIdx + 1) % INSIGHT_REVIEWS.length; insightRenderReviews(); }, 4000);
+}
+insightInit();
+
+// ── Language Selector ──
+function toggleLangDropdown() {
+  const btn = document.getElementById('langBtn');
+  const dd = document.getElementById('langDropdown');
+  const isOpen = dd.classList.contains('visible');
+  if (isOpen) {
+    dd.classList.remove('visible');
+    btn.classList.remove('open');
+    btn.setAttribute('aria-expanded', 'false');
+  } else {
+    dd.classList.add('visible');
+    btn.classList.add('open');
+    btn.setAttribute('aria-expanded', 'true');
+  }
+}
+
+function selectLanguage(el, lang) {
+  document.querySelectorAll('#langDropdown .lang-option').forEach(opt => {
+    opt.classList.remove('active');
+    const chk = opt.querySelector('.lang-check');
+    if (chk) chk.remove();
+  });
+  el.classList.add('active');
+  el.insertAdjacentHTML('beforeend',
+    `<svg class="lang-check" viewBox="0 0 13 13" fill="none">
+      <path d="M2 6.5l3.5 3.5 5.5-6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>`
+  );
+  document.getElementById('currentLangLabel').textContent = lang;
+  setTimeout(() => {
+    document.getElementById('langDropdown').classList.remove('visible');
+    document.getElementById('langBtn').classList.remove('open');
+    document.getElementById('langBtn').setAttribute('aria-expanded', 'false');
+  }, 110);
+}
+
+document.addEventListener('click', (e) => {
+  const sel = document.getElementById('langSelector');
+  if (sel && !sel.contains(e.target)) {
+    document.getElementById('langDropdown').classList.remove('visible');
+    document.getElementById('langBtn').classList.remove('open');
+    document.getElementById('langBtn').setAttribute('aria-expanded', 'false');
+  }
+});
+
+// Animate bars on load
+window.addEventListener('load', () => {
+  document.querySelectorAll('.progress-fill').forEach((bar, i) => {
+    const finalW = bar.style.width;
+    bar.style.width = '0';
+    setTimeout(() => {
+      bar.style.width = finalW;
+    }, 300 + i * 120);
+  });
+});
+</script>
+</body>
+</html>
