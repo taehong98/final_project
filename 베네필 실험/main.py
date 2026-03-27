@@ -31,7 +31,13 @@ load_dotenv()
 
 # 프로젝트 내 모듈 (같은 디렉터리에 위치해야 함)
 from scoring import score_policies
-from policy_search import search_policies
+from policy_search import (
+    search_policies,
+    search_by_keyword,
+    search_by_natural_language,
+    browse_all,
+    get_categories,
+)
 from analysis import analyze  # GPT 분석 (탈락사유/해결방법 생성)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -88,6 +94,14 @@ async def post_analyze(req: AnalyzeRequest):
     """
     사용자 조건 입력 → 정책 검색 → 스코어링 → GPT 분석 → 대시보드 데이터 반환
     """
+    # ── 0) 헬퍼 함수 — 반드시 사용 전에 정의 ────────────────
+    import re as _re_slug
+
+    def _make_slug(name: str, idx: int) -> str:
+        slug = _re_slug.sub(r"[^\w가-힣]", "-", name).strip("-").lower()
+        slug = _re_slug.sub(r"-+", "-", slug)
+        return slug or f"policy-{idx}"
+
     # ── 1) income_percent → 연소득 만원 환산 ─────────────────
     # 중위소득 기준: 1인 가구 월 222만원 × 12 = 2,664만원 (2024)
     MEDIAN_ANNUAL = {1: 2664, 2: 4416, 3: 5652, 4: 6864, 5: 8028, 6: 9132}
@@ -124,10 +138,18 @@ async def post_analyze(req: AnalyzeRequest):
     except Exception as e:
         log.warning("GPT 분석 스킵 (오류): %s", e)
 
-    # GPT 포트폴리오 결과를 policy_id 기준으로 인덱싱
+    # GPT 포트폴리오 결과를 policy_id + 서비스명 slug 양쪽으로 인덱싱
+    # [BUG FIX] GPT policy_id와 _make_slug 결과가 다를 경우를 대비해
+    # 서비스명 slug도 키로 추가 → gpt_map 조회 누락 방지
     gpt_map: dict[str, dict] = {}
     for item in gpt_result.get("포트폴리오", []):
-        gpt_map[item.get("policy_id", "")] = item
+        pid = item.get("policy_id", "")
+        if pid:
+            gpt_map[pid] = item
+        # 서비스명 slug로도 등록 (이중 보험)
+        name_slug = _make_slug(item.get("서비스명", ""), 0)
+        if name_slug and name_slug not in gpt_map:
+            gpt_map[name_slug] = item
 
     # ── 6) scoring.py 결과 → 카드 데이터 변환 ───────────────
     # GPT 분석 없이 scoring.py 결과를 직접 사용
@@ -152,13 +174,6 @@ async def post_analyze(req: AnalyzeRequest):
             if kw in category:
                 return icon
         return "📋"
-
-    def _make_slug(name: str, idx: int) -> str:
-        import re
-        # 한글·영문·숫자 외 모두 하이픈으로 교체, 연속 하이픈 정리
-        slug = re.sub(r"[^\w가-힣]", "-", name).strip("-").lower()
-        slug = re.sub(r"-+", "-", slug)
-        return slug or f"policy-{idx}"
 
     def _extract_benefit(p: dict) -> str:
         """
@@ -227,23 +242,45 @@ async def post_analyze(req: AnalyzeRequest):
         if slug in seen_slugs:
             continue
         seen_slugs.add(slug)
-        gpt  = gpt_map.get(slug, {})
+
+        # [BUG FIX 1] gpt_map slug 1차 조회 → 실패 시 서비스명 직접 비교로 2차 조회
+        # slug 생성 방식이 미묘하게 달라 gpt_map 조회가 빈 dict를 반환하는 경우 방지
+        gpt = gpt_map.get(slug)
+        if not gpt:
+            policy_name_raw = p.get("서비스명", "")
+            for gpt_item in gpt_result.get("포트폴리오", []):
+                if gpt_item.get("서비스명", "") == policy_name_raw:
+                    gpt = gpt_item
+                    break
+        if not gpt:
+            gpt = {}
+
+        # [BUG FIX 2] `gpt.get("수급확률") or pct` 패턴 제거
+        # GPT가 0을 반환하면 Python falsy → scoring.py 값으로 오염되는 버그 수정
+        # None 여부를 명시적으로 체크
+        _gpt_pct = gpt.get("수급확률")
+        final_pct = pct if _gpt_pct is None else _gpt_pct
 
         # GPT 탈락사유/해결방법: _enrich_for_html 이후 [{icon, html}, ...] 객체 배열
         # 키 이름은 한글("탈락사유"/"해결방법")이므로 그대로 사용
         all_cards.append({
             "policy_id":           slug,
+            "서비스명":             p.get("서비스명", "-"),          # HTML card.서비스명 호환
             "icon":                gpt.get("icon") or _pick_icon(p),
             "policy_name":         p.get("서비스명", "-"),
             "subtitle":            gpt.get("subtitle") or subtitle,
             "benefit_label":       gpt.get("benefit_label") or _extract_benefit(p),
             "source_label":        institution[:6],
-            "eligibility_percent": gpt.get("수급확률") or pct,
-            "_css":                gpt.get("_css") or css,           # GPT CSS 우선
+            "eligibility_percent": final_pct,
+            "수급확률":             final_pct,                       # HTML card.수급확률 호환
+            "개인요약":             gpt.get("개인요약") or "",        # [BUG FIX 2] None도 빈문자열로
+            "탈락사유":             gpt.get("탈락사유", []),          # HTML card.탈락사유 호환
+            "해결방법":             gpt.get("해결방법", []),          # HTML card.해결방법 호환
+            "_css":                gpt.get("_css") or css,
             "_matched":            p.get("matched", []),
             "_failed":             p.get("failed", []),
-            "_issues":             gpt.get("탈락사유", []),          # [{icon, html}, ...]
-            "_guides":             gpt.get("해결방법", []),          # [{icon, html}, ...]
+            "_issues":             gpt.get("탈락사유", []),
+            "_guides":             gpt.get("해결방법", []),
             "_raw":                p,
         })
 
@@ -256,6 +293,7 @@ async def post_analyze(req: AnalyzeRequest):
         "user_name": req.user_name,
         "scored":    scored,
         "all_cards": all_cards,
+        "result":    gpt_result,   # [BUG FIX] apply-assist 세션 조회에 필요
         "created_at": datetime.now().isoformat(),
     }
 
@@ -266,6 +304,8 @@ async def post_analyze(req: AnalyzeRequest):
     passed       = [c for c in all_cards if c["eligibility_percent"] >= 60]
     avg_pct      = round(sum(c["eligibility_percent"] for c in all_cards) / len(all_cards)) if all_cards else 0
     ready_count  = sum(1 for c in all_cards if c["eligibility_percent"] >= 80)
+    # [BUG FIX] GPT 대시보드통계 추출 (dict 리터럴 밖에서 미리 선언)
+    _gpt_stats   = gpt_result.get("대시보드통계", {})
 
     portfolio_preview_items = [
         {"icon": c["icon"], "label": c["policy_name"], "benefit_label": c["benefit_label"]}
@@ -301,12 +341,20 @@ async def post_analyze(req: AnalyzeRequest):
                     "education_level":   req.education_level or "",
                 }
             },
-            "recommendation_cards": all_cards,   # 전체 전달 (HTML에서 상위 N개 렌더링)
+            "recommendation_cards": all_cards,   # HTML renderDashboard 호환 키
             "dashboard_stats": {
                 "matched_policy_count":         len(all_cards),
                 "average_probability_percent":  avg_pct,
                 "expected_total_benefit_label": "-",
                 "ready_apply_count":            ready_count,
+            },
+            # HTML renderDashboard 의 stats 필드 호환 (한글 키)
+            # [BUG FIX] GPT 대시보드통계가 있으면 우선 사용 (_gpt_stats는 아래에서 미리 계산)
+            "stats": {
+                "해당정책수":    _gpt_stats.get("해당정책수", len(all_cards)),
+                "평균확률":      _gpt_stats.get("평균확률", avg_pct),
+                "예상수혜액":    _gpt_stats.get("예상수혜액", "-"),
+                "즉시신청가능":  _gpt_stats.get("즉시신청가능", ready_count),
             },
             "portfolio_preview": {
                 "total_expected_benefit_label": "-",
@@ -607,6 +655,94 @@ async def get_apply_assist(
             },
         }
     }
+
+
+# ─────────────────────────────────────────────────────────────
+# 5. GET /search/keyword  — 키워드/필터 검색
+# ─────────────────────────────────────────────────────────────
+@app.get("/search/keyword")
+async def get_search_keyword(
+    keyword:      str = Query("",  description="검색어 (서비스명·지원내용·목적 LIKE)"),
+    category:     str = Query("",  description="서비스분야 필터 (예: 주거, 고용)"),
+    support_type: str = Query("",  description="지원유형 필터 (예: 현금, 서비스)"),
+    limit:        int = Query(20,  ge=1, le=100, description="최대 반환 건수"),
+    offset:       int = Query(0,   ge=0,          description="페이지네이션 오프셋"),
+):
+    """
+    키워드 또는 분야/유형 필터로 정책 검색 (FAISS 불필요, DB 직접 조회)
+    """
+    if not keyword and not category and not support_type:
+        _err("EMPTY_QUERY", "keyword, category, support_type 중 하나 이상 입력하세요.", 400)
+
+    results = search_by_keyword(
+        keyword=keyword,
+        category=category,
+        support_type=support_type,
+        limit=limit,
+        offset=offset,
+    )
+    return {
+        "count":   len(results),
+        "results": results,
+    }
+
+
+# ─────────────────────────────────────────────────────────────
+# 6. GET /search/natural  — 자연어 검색
+# ─────────────────────────────────────────────────────────────
+@app.get("/search/natural")
+async def get_search_natural(
+    q:     str = Query(..., description="자연어 검색 문장 (예: 청년 월세 지원받고 싶어요)"),
+    top_k: int = Query(10,  ge=1, le=50, description="반환 건수"),
+):
+    """
+    자연어 문장 → FAISS 벡터 유사도 검색
+    사용자 조건 입력 없이 궁금한 내용을 문장으로 검색
+    """
+    if not q.strip():
+        _err("EMPTY_QUERY", "검색 문장을 입력하세요.", 400)
+
+    try:
+        results = search_by_natural_language(q.strip(), top_k=top_k)
+    except FileNotFoundError as e:
+        _err("INDEX_NOT_FOUND", str(e), 503)
+    except Exception as e:
+        log.error("자연어 검색 오류: %s", e)
+        _err("SEARCH_ERROR", f"검색 중 오류: {e}", 500)
+
+    return {
+        "query":   q,
+        "count":   len(results),
+        "results": results,
+    }
+
+
+# ─────────────────────────────────────────────────────────────
+# 7. GET /browse  — 전체 정책 브라우징
+# ─────────────────────────────────────────────────────────────
+@app.get("/browse")
+async def get_browse(
+    page:     int = Query(1,   ge=1,          description="페이지 번호"),
+    per_page: int = Query(20,  ge=1, le=100,  description="페이지당 건수"),
+    category: str = Query("",                 description="분야 필터 (선택)"),
+):
+    """
+    조건 없이 전체 정책 목록 페이지네이션 브라우징
+    """
+    data = browse_all(page=page, per_page=per_page, category=category)
+    return data
+
+
+# ─────────────────────────────────────────────────────────────
+# 8. GET /categories  — 서비스분야 목록
+# ─────────────────────────────────────────────────────────────
+@app.get("/categories")
+async def get_categories_list():
+    """
+    DB에 존재하는 서비스분야 고유값 목록 반환 (프론트 필터 드롭다운용)
+    """
+    cats = get_categories()
+    return {"categories": cats}
 
 
 # ─────────────────────────────────────────────────────────────

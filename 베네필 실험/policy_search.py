@@ -17,6 +17,7 @@ from pathlib import Path
 import numpy as np
 import faiss
 from sentence_transformers import SentenceTransformer
+from sqlalchemy import create_engine, text
 
 # ──────────────────────────────────────────────
 # 설정
@@ -25,6 +26,9 @@ MODEL_NAME = "BAAI/bge-m3"
 INDEX_DIR  = Path("faiss_index")
 INDEX_PATH = INDEX_DIR / "gov_benefits.index"
 META_PATH  = INDEX_DIR / "metadata.json"
+
+DB_URL     = "sqlite:///gov_benefits.db"
+TABLE_NAME = "gov_benefits"
 
 TOP_K_DEFAULT = 10
 SCORE_MIN     = 0.45  # [수정] 0.3 → 0.45: 너무 낮으면 무관한 정책 다수 포함
@@ -181,28 +185,178 @@ class PolicySearcher:
 # ──────────────────────────────────────────────
 # 3. 공개 인터페이스
 # ──────────────────────────────────────────────
+def search_by_keyword(
+    keyword: str = "",
+    category: str = "",
+    support_type: str = "",
+    limit: int = 20,
+    offset: int = 0,
+) -> list[dict]:
+    """
+    키워드 / 분야·유형 필터로 DB 직접 조회 (FAISS 불필요)
+
+    Parameters
+    ----------
+    keyword      : 서비스명·지원내용에서 LIKE 검색
+    category     : 서비스분야 정확 매칭 (예: "주거", "고용")
+    support_type : 지원유형 정확 매칭 (예: "현금", "서비스")
+    limit        : 최대 반환 건수
+    offset       : 페이지네이션 오프셋
+    """
+    engine = create_engine(DB_URL)
+    conditions, params = ["1=1"], {}
+
+    if keyword:
+        conditions.append(
+            "(서비스명 LIKE :kw OR 지원내용 LIKE :kw OR 서비스목적요약 LIKE :kw)"
+        )
+        params["kw"] = f"%{keyword}%"
+    if category:
+        conditions.append("서비스분야 LIKE :cat")
+        params["cat"] = f"%{category}%"
+    if support_type:
+        conditions.append("지원유형 LIKE :stype")
+        params["stype"] = f"%{support_type}%"
+
+    sql = (
+        f"SELECT * FROM {TABLE_NAME} WHERE {' AND '.join(conditions)}"
+        f" ORDER BY 서비스명 LIMIT :lim OFFSET :off"
+    )
+    params["lim"] = limit
+    params["off"] = offset
+
+    try:
+        with engine.connect() as conn:
+            rows = conn.execute(text(sql), params).fetchall()
+        results = [dict(r._mapping) for r in rows]
+        log.info("키워드 검색: '%s' → %d 건", keyword, len(results))
+        return results
+    except Exception as e:
+        log.error("키워드 검색 오류: %s", e)
+        return []
+
+
+def search_by_natural_language(
+    query_text: str,
+    top_k: int = TOP_K_DEFAULT,
+) -> list[dict]:
+    """
+    자연어 문장 → FAISS 벡터 검색 (사용자 조건 dict 없이 직접 쿼리)
+
+    Parameters
+    ----------
+    query_text : 자연어 검색 문장 (예: "청년 월세 지원받고 싶어요")
+    top_k      : 반환 건수
+    """
+    if not query_text.strip():
+        return []
+    results = PolicySearcher().search(query_text.strip(), top_k=top_k)
+    log.info("자연어 검색: '%s' → %d 건", query_text[:30], len(results))
+    return results
+
+
+def browse_all(
+    page: int = 1,
+    per_page: int = 20,
+    category: str = "",
+    sort_by: str = "서비스명",
+) -> dict:
+    """
+    조건 없이 전체 정책 목록 페이지네이션 브라우징
+
+    Parameters
+    ----------
+    page     : 페이지 번호 (1부터)
+    per_page : 페이지당 건수
+    category : 분야 필터 (선택)
+    sort_by  : 정렬 기준 컬럼명
+
+    Returns
+    -------
+    {total, page, per_page, total_pages, results}
+    """
+    engine = create_engine(DB_URL)
+    offset = (page - 1) * per_page
+    where  = "WHERE 서비스분야 LIKE :cat" if category else ""
+    params: dict = {}
+    if category:
+        params["cat"] = f"%{category}%"
+
+    try:
+        with engine.connect() as conn:
+            total_row = conn.execute(
+                text(f"SELECT COUNT(*) FROM {TABLE_NAME} {where}"),
+                params,
+            ).fetchone()
+            total = total_row[0] if total_row else 0
+
+            rows = conn.execute(
+                text(
+                    f"SELECT * FROM {TABLE_NAME} {where}"
+                    f" ORDER BY {sort_by} LIMIT :lim OFFSET :off"
+                ),
+                {**params, "lim": per_page, "off": offset},
+            ).fetchall()
+
+        results = [dict(r._mapping) for r in rows]
+        total_pages = -(-total // per_page)  # ceiling division
+        log.info("전체 브라우징: page=%d/%d, %d 건", page, total_pages, len(results))
+        return {
+            "total":       total,
+            "page":        page,
+            "per_page":    per_page,
+            "total_pages": total_pages,
+            "results":     results,
+        }
+    except Exception as e:
+        log.error("브라우징 오류: %s", e)
+        return {"total": 0, "page": page, "per_page": per_page, "total_pages": 0, "results": []}
+
+
+def get_categories() -> list[str]:
+    """DB에서 서비스분야 고유값 목록 반환 (필터 UI용)"""
+    engine = create_engine(DB_URL)
+    try:
+        with engine.connect() as conn:
+            rows = conn.execute(
+                text(f"SELECT DISTINCT 서비스분야 FROM {TABLE_NAME} WHERE 서비스분야 IS NOT NULL ORDER BY 서비스분야")
+            ).fetchall()
+        return [r[0] for r in rows if r[0]]
+    except Exception as e:
+        log.error("카테고리 조회 오류: %s", e)
+        return []
+
+
 def search_policies(
-    user: dict,
+    user: dict | None = None,
+    query_text: str = "",
     top_k: int = TOP_K_DEFAULT,
     filters: dict[str, str] | None = None,
 ) -> list[dict]:
     """
-    사용자 정보 dict → 유사 정책 리스트 반환
+    사용자 정보 dict 또는 자연어 쿼리로 유사 정책 리스트 반환
 
     Parameters
     ----------
-    user    : get_user_input() 반환값
-    top_k   : 반환 건수 (기본 10)
-    filters : 추가 필터 ex) {"지원유형": "현금지원"}
+    user       : get_user_input() 반환값 (조건 기반 검색)
+    query_text : 자연어 직접 입력 (user 없을 때 사용)
+    top_k      : 반환 건수 (기본 10)
+    filters    : 추가 필터 ex) {"지원유형": "현금지원"}
     """
-    query   = build_query(user)
+    if user:
+        query = build_query(user)
+    elif query_text:
+        query = query_text
+    else:
+        return []
+
     results = PolicySearcher().search(query, top_k=top_k, filters=filters)
 
     # 서비스명에 '마감' 포함된 항목 제외
     results = [r for r in results if "마감" not in (r.get("서비스명") or "")]
 
-    # 지역 필터: 전국 정책 + 본인 거주지역 정책만 포함
-    region = user.get("거주지역", "")
+    # 지역 필터: 전국 정책 + 본인 거주지역 정책만 포함 (user 있을 때만)
+    region = (user or {}).get("거주지역", "")
     if region and region != "전국":
         METRO_KEYWORDS = [
             "서울", "부산", "대구", "인천", "광주", "대전", "울산", "세종",
