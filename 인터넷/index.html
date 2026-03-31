@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>베네픽 v2.0 — 대시보드</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- AI LOADING OVERLAY -->
+<div class="ai-loading" id="aiLoading">
+  <div class="ai-loading-card">
+    <div class="ai-spinner"></div>
+    <div class="ai-loading-text">
+      <h3>AI 분석 중입니다...</h3>
+      <p>입력하신 조건으로<br>수급 가능성을 계산하고 있어요</p>
+      <br>
+      <div class="ai-dots">
+        <span></span><span></span><span></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- NAV -->
+<nav>
+  <a href="index.html" class="nav-logo">
+    <div class="logo-mark">B</div>
+    <div class="logo-text">
+      <span class="logo-name">베네픽</span>
+      <span class="logo-tag">복지 수급 확률 분석 v2.0</span>
+    </div>
+  </a>
+  <div class="nav-center">
+    <a href="index.html" class="active">대시보드</a>
+    <a href="search.html">정책 검색</a>
+    <a href="analysis.html">상세 분석</a>
+    <a href="portfolio.html">포트폴리오</a>
+    <a href="apply.html">신청 보조</a>
+    <a href="community.html">커뮤니티</a>
+  </div>
+  <div class="nav-right">
+    <div id="langSelector" class="lang-selector">
+      <button id="langBtn" class="lang-btn" onclick="toggleLangDropdown()" aria-haspopup="true" aria-expanded="false">
+        <svg class="globe-svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10A15.3 15.3 0 0 1 12 2z"/>
+        </svg>
+        <span class="lang-label-text" id="currentLangLabel">한국어</span>
+        <svg class="lang-chevron" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div id="langDropdown" class="lang-dropdown">
+        <div class="lang-dropdown-inner">
+          <div class="lang-option active" onclick="selectLanguage(this, '한국어')">
+            <span class="lang-flag">🇰🇷</span><span>한국어</span>
+            <svg class="lang-check" viewBox="0 0 13 13" fill="none"><path d="M2 6.5l3.5 3.5 5.5-6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="lang-option" onclick="selectLanguage(this, 'English')"><span class="lang-flag">🇺🇸</span><span>English</span></div>
+          <div class="lang-divider"></div>
+          <div class="lang-option" onclick="selectLanguage(this, '日本語')"><span class="lang-flag">🇯🇵</span><span>日本語</span></div>
+          <div class="lang-option" onclick="selectLanguage(this, 'Tiếng Việt')"><span class="lang-flag">🇻🇳</span><span>Tiếng Việt</span></div>
+          <div class="lang-option" onclick="selectLanguage(this, '中文')"><span class="lang-flag">🇨🇳</span><span>中文</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="nav-avatar">
+      <div class="avatar-circle">남</div>
+      <span class="avatar-name">남정현님</span>
+      <span>▾</span>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+
+  <div class="screen active" id="screen-dashboard">
+
+    <!-- SEARCH BAR — 전체 너비 -->
+    <div class="dash-search-bar" style="margin-bottom:24px">
+
+
+          <span class="dash-search-label">🔍 검색</span>
+          <input id="dash-search-input"
+            placeholder="정책명, 키워드, 또는 문장으로 검색 (예: 청년 월세, 취업 후 생계 지원)"
+            onkeydown="if(event.key==='Enter') doDashSearch()">
+          <button class="btn-primary" onclick="doDashSearch()" style="flex:none;padding:10px 20px">검색</button>
+        </div>
+
+    <div class="grid-main">
+      <!-- LEFT COLUMN -->
+      <div>
+
+        <!-- USER PROFILE -->
+        <div class="profile-card">
+          <div class="profile-header">
+            <div class="profile-user">
+              <div class="profile-avatar">남</div>
+              <div class="profile-info">
+                <h2>남정현님의 복지 분석</h2>
+                <p>마지막 업데이트: 오늘 오전 9:42 · 서울특별시 마포구</p>
+              </div>
+            </div>
+            <div class="score-badge">
+              <div class="score-label">종합 수급 점수</div>
+              <div class="score-num">87</div>
+              <div class="score-sub">/ 100점</div>
+            </div>
+          </div>
+          <div class="profile-tags">
+            <span class="profile-tag">📅 만 27세</span>
+            <span class="profile-tag">📍 서울 마포구</span>
+            <span class="profile-tag">💰 중위소득 52%</span>
+            <span class="profile-tag">🏠 1인 가구</span>
+            <span class="profile-tag">👔 미취업</span>
+            <span class="profile-tag">🎓 대졸</span>
+          </div>
+        </div>
+
+        <!-- INPUT CARD -->
+        <div class="input-card">
+          <div class="input-card-header">
+            <h3>🎯 조건 입력으로 정확도 높이기</h3>
+            <span class="ai-chip">🤖 AI 분석</span>
+          </div>
+          <div class="input-grid">
+            <div class="input-item">
+              <label>연령</label>
+              <select id="sel-age">
+                <option>만 18세</option>
+                <option>만 19세</option>
+                <option>만 20세</option>
+                <option>만 21세</option>
+                <option>만 22세</option>
+                <option>만 23세</option>
+                <option>만 24세</option>
+                <option>만 25세</option>
+                <option>만 26세</option>
+                <option selected>만 27세</option>
+                <option>만 28세</option>
+                <option>만 29세</option>
+                <option>만 30세</option>
+                <option>만 31세</option>
+                <option>만 32세</option>
+                <option>만 33세</option>
+                <option>만 34세</option>
+                <option>만 35세</option>
+                <option>만 36세</option>
+                <option>만 37세</option>
+                <option>만 38세</option>
+                <option>만 39세</option>
+                <option>만 40세</option>
+                <option>만 41세</option>
+                <option>만 42세</option>
+                <option>만 43세</option>
+                <option>만 44세</option>
+                <option>만 45세</option>
+                <option>만 46세</option>
+                <option>만 47세</option>
+                <option>만 48세</option>
+                <option>만 49세</option>
+                <option>만 50세</option>
+                <option>만 51세</option>
+                <option>만 52세</option>
+                <option>만 53세</option>
+                <option>만 54세</option>
+                <option>만 55세</option>
+                <option>만 56세</option>
+                <option>만 57세</option>
+                <option>만 58세</option>
+                <option>만 59세</option>
+                <option>만 60세</option>
+                <option>만 61세</option>
+                <option>만 62세</option>
+                <option>만 63세</option>
+                <option>만 64세</option>
+                <option>만 65세 이상</option>
+              </select>
+            </div>
+            <div class="input-item">
+              <label>지역</label>
+              <select id="sel-region">
+                <option>서울특별시</option>
+                <option>부산광역시</option>
+                <option>대구광역시</option>
+                <option>인천광역시</option>
+                <option>광주광역시</option>
+                <option>대전광역시</option>
+                <option>울산광역시</option>
+                <option>세종특별자치시</option>
+                <option>경기도</option>
+                <option>강원특별자치도</option>
+                <option>충청북도</option>
+                <option>충청남도</option>
+                <option>전북특별자치도</option>
+                <option>전라남도</option>
+                <option>경상북도</option>
+                <option>경상남도</option>
+                <option>제주특별자치도</option>
+              </select>
+            </div>
+            <div class="input-item">
+              <label>소득 수준</label>
+              <select id="sel-income">
+                <option>중위소득 30% 이하</option>
+                <option>중위소득 30~40%</option>
+                <option>중위소득 40~50%</option>
+                <option selected>중위소득 50~60%</option>
+                <option>중위소득 60~70%</option>
+                <option>중위소득 70~80%</option>
+                <option>중위소득 80~90%</option>
+                <option>중위소득 90~100%</option>
+                <option>중위소득 100~120%</option>
+                <option>중위소득 120~150%</option>
+                <option>중위소득 150% 초과</option>
+              </select>
+            </div>
+            <div class="input-item">
+              <label>가구 유형</label>
+              <select id="sel-family">
+                <option selected>1인 가구</option>
+                <option>2인 가구</option>
+                <option>3인 가구</option>
+                <option>4인 이상 가구</option>
+                <option>한부모 가구</option>
+                <option>다자녀 가구</option>
+                <option>다문화 가구</option>
+                <option>조손 가구</option>
+                <option>노인 단독 가구</option>
+              </select>
+            </div>
+            <div class="input-item">
+              <label>취업 상태</label>
+              <select id="sel-employment">
+                <option selected>미취업</option>
+                <option>취업자 (정규직)</option>
+                <option>취업자 (비정규직/계약직)</option>
+                <option>자영업자</option>
+                <option>구직자 (실업)</option>
+                <option>학생</option>
+                <option>육아휴직 중</option>
+                <option>무직</option>
+              </select>
+            </div>
+            <div class="input-item">
+              <label>장애 여부</label>
+              <select id="sel-disability">
+                <option selected>없음</option>
+                <option>장애 1~3급 (심한 장애)</option>
+                <option>장애 4~6급 (심하지 않은 장애)</option>
+              </select>
+            </div>
+          </div>
+          <button class="analyze-btn" onclick="runAnalysis()">
+            🔍 수급 가능성 AI 분석 시작하기
+          </button>
+        </div>
+
+        <!-- POLICY SCORING LIST -->
+        <div>
+          <div class="section-title">
+            <h3>📈 수급 가능성 스코어링 <span style="font-size:13px;font-weight:500;color:var(--gray-500)">(높은 순)</span></h3>
+            <a href="#">전체보기 →</a>
+          </div>
+
+          <div class="policy-list">
+
+            <!-- Policy 1 - 92% -->
+            <div class="policy-card top" onclick="showDetail('청년-월세-한시-특별지원')">
+              <div class="policy-top-row">
+                <div class="policy-left">
+                  <div class="policy-icon green">🏠</div>
+                  <div class="policy-meta">
+                    <h4>청년 월세 한시 특별지원</h4>
+                    <p>만 19~34세 · 월세 60만원 이하 · 독립 거주 청년</p>
+                    <div class="policy-badges">
+                      <span class="badge badge-green">✅ 조건 충족</span>
+                      <span class="badge badge-blue">Gov24</span>
+                      <span class="badge badge-gray">월 최대 20만원</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="policy-percent">
+                  <div class="percent-num high">92<span style="font-size:18px">%</span></div>
+                  <div class="percent-label">수급 확률</div>
+                </div>
+              </div>
+              <div class="progress-row">
+                <div class="progress-track">
+                  <div class="progress-fill green" style="width:92%"></div>
+                </div>
+                <div class="benefit-chip">연 240만원</div>
+              </div>
+              <div class="policy-action">상세 분석 보기 →</div>
+            </div>
+
+            <!-- Policy 2 - 85% -->
+            <div class="policy-card top" onclick="showDetail('국민내일배움카드')">
+              <div class="policy-top-row">
+                <div class="policy-left">
+                  <div class="policy-icon green">📚</div>
+                  <div class="policy-meta">
+                    <h4>국민내일배움카드</h4>
+                    <p>실업자 · 이직 예정자 · 단기근로자 지원 직업훈련</p>
+                    <div class="policy-badges">
+                      <span class="badge badge-green">✅ 조건 충족</span>
+                      <span class="badge badge-blue">고용부</span>
+                      <span class="badge badge-gray">최대 500만원</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="policy-percent">
+                  <div class="percent-num high">85<span style="font-size:18px">%</span></div>
+                  <div class="percent-label">수급 확률</div>
+                </div>
+              </div>
+              <div class="progress-row">
+                <div class="progress-track">
+                  <div class="progress-fill green" style="width:85%"></div>
+                </div>
+                <div class="benefit-chip">최대 500만원</div>
+              </div>
+              <div class="policy-action">상세 분석 보기 →</div>
+            </div>
+
+            <!-- INLINE AD -->
+            <div class="inline-ad">
+              <div class="inline-ad-icon">🏦</div>
+              <div class="inline-ad-text">
+                <span class="ad-badge">AD</span>
+                <h5>카카오뱅크 청년 전세 대출</h5>
+                <p>연 2.1%부터 · 최대 2억원 · 5분 비대면 신청</p>
+              </div>
+              <div class="inline-ad-arrow">›</div>
+            </div>
+
+            <!-- Policy 3 - 78% -->
+            <div class="policy-card mid" onclick="showDetail('청년-취업성공패키지')">
+              <div class="policy-top-row">
+                <div class="policy-left">
+                  <div class="policy-icon blue">💼</div>
+                  <div class="policy-meta">
+                    <h4>청년도약계좌</h4>
+                    <p>만 19~34세 · 개인소득 6,000만원 이하 · 5년 적립</p>
+                    <div class="policy-badges">
+                      <span class="badge badge-blue">⚡ 확인 필요</span>
+                      <span class="badge badge-blue">금융위</span>
+                      <span class="badge badge-gray">최대 5,000만원</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="policy-percent">
+                  <div class="percent-num mid">78<span style="font-size:18px">%</span></div>
+                  <div class="percent-label">수급 확률</div>
+                </div>
+              </div>
+              <div class="progress-row">
+                <div class="progress-track">
+                  <div class="progress-fill blue" style="width:78%"></div>
+                </div>
+                <div class="benefit-chip">정부기여금 포함</div>
+              </div>
+              <div class="policy-action">상세 분석 보기 →</div>
+            </div>
+
+            <!-- Policy 4 - 74% -->
+            <div class="policy-card mid" onclick="showDetail('청년-마음건강-지원사업')">
+              <div class="policy-top-row">
+                <div class="policy-left">
+                  <div class="policy-icon blue">🏥</div>
+                  <div class="policy-meta">
+                    <h4>청년 마음건강 지원사업</h4>
+                    <p>만 19~34세 · 심리상담 바우처 · 연간 10회</p>
+                    <div class="policy-badges">
+                      <span class="badge badge-green">✅ 조건 충족</span>
+                      <span class="badge badge-gray">복지부</span>
+                      <span class="badge badge-gray">10회 무료</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="policy-percent">
+                  <div class="percent-num mid">74<span style="font-size:18px">%</span></div>
+                  <div class="percent-label">수급 확률</div>
+                </div>
+              </div>
+              <div class="progress-row">
+                <div class="progress-track">
+                  <div class="progress-fill blue" style="width:74%"></div>
+                </div>
+                <div class="benefit-chip">연 80만원 상당</div>
+              </div>
+              <div class="policy-action">상세 분석 보기 →</div>
+            </div>
+
+            <!-- Policy 5 - 41% -->
+            <div class="policy-card low" onclick="showDetail('청년창업사관학교')">
+              <div class="policy-top-row">
+                <div class="policy-left">
+                  <div class="policy-icon orange">🚀</div>
+                  <div class="policy-meta">
+                    <h4>청년창업사관학교</h4>
+                    <p>만 39세 이하 · 창업 아이템 보유 · 사업계획서 필요</p>
+                    <div class="policy-badges">
+                      <span class="badge badge-orange">⚠️ 조건 부족</span>
+                      <span class="badge badge-gray">중기부</span>
+                      <span class="badge badge-gray">최대 1억원</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="policy-percent">
+                  <div class="percent-num low">41<span style="font-size:18px">%</span></div>
+                  <div class="percent-label">수급 확률</div>
+                </div>
+              </div>
+              <div class="progress-row">
+                <div class="progress-track">
+                  <div class="progress-fill orange" style="width:41%"></div>
+                </div>
+                <div class="benefit-chip">최대 1억원</div>
+              </div>
+              <div class="policy-action">상세 분석 보기 →</div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- INLINE SEARCH RESULTS — 스코어링 목록 아래 -->
+        <div id="dash-search-results-wrap">
+          <div class="dash-search-results-header">
+            <h3>🔎 검색 결과</h3>
+            <button class="dash-search-close-btn" onclick="closeDashSearch()">✕ 닫기</button>
+          </div>
+          <div id="dash-search-status"></div>
+          <div id="dash-search-results"></div>
+        </div>
+
+      </div>
+
+      <!-- RIGHT SIDEBAR -->
+      <div class="sidebar">
+
+        <!-- Summary stats -->
+        <div class="sidebar-card">
+          <h4>📊 나의 수급 현황</h4>
+          <div class="stat-grid">
+            <div class="stat-item">
+              <div class="val green">12</div>
+              <div class="lbl">해당 정책 수</div>
+            </div>
+            <div class="stat-item">
+              <div class="val blue">87%</div>
+              <div class="lbl">평균 확률</div>
+            </div>
+            <div class="stat-item">
+              <div class="val green">1,040<span style="font-size:14px">만</span></div>
+              <div class="lbl">예상 수혜액</div>
+            </div>
+            <div class="stat-item">
+              <div class="val blue">3</div>
+              <div class="lbl">즉시 신청 가능</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Portfolio quick -->
+        <div class="sidebar-card">
+          <h4>💼 추천 포트폴리오</h4>
+          <div class="portfolio-total">
+            <div class="amount">1,040만원</div>
+            <div class="lbl">총 예상 연간 수혜액</div>
+          </div>
+          <div class="portfolio-items">
+            <div class="port-item">
+              <span class="name">🏠 청년 월세 지원</span>
+              <span class="amt">240만</span>
+            </div>
+            <div class="port-item">
+              <span class="name">📚 내일배움카드</span>
+              <span class="amt">500만</span>
+            </div>
+            <div class="port-item">
+              <span class="name">🏥 마음건강 지원</span>
+              <span class="amt">80만</span>
+            </div>
+            <div class="port-item">
+              <span class="name">+ 기타 혜택</span>
+              <span class="amt" style="color:var(--green)">220만</span>
+            </div>
+          </div>
+          <button class="btn-primary" style="width:100%;justify-content:center;padding:10px;" onclick="showTab('portfolio')">
+            💼 포트폴리오 전체 보기 →
+          </button>
+        </div>
+
+        <!-- Checklist -->
+        <div class="sidebar-card">
+          <h4>✅ 신청 체크리스트</h4>
+          <div class="checklist">
+            <div class="check-item done" onclick="toggleCheck(this)">
+              <div class="check-box">✓</div>
+              <span class="check-text">신청자 정보 입력</span>
+            </div>
+            <div class="check-item done" onclick="toggleCheck(this)">
+              <div class="check-box">✓</div>
+              <span class="check-text">소득 확인서 준비</span>
+            </div>
+            <div class="check-item" onclick="toggleCheck(this)">
+              <div class="check-box"></div>
+              <span class="check-text">신청서 작성</span>
+            </div>
+            <div class="check-item" onclick="toggleCheck(this)">
+              <div class="check-box"></div>
+              <span class="check-text">서류 제출</span>
+            </div>
+            <div class="check-item" onclick="toggleCheck(this)">
+              <div class="check-box"></div>
+              <span class="check-text">계좌 등록</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recommended services -->
+        <div class="sidebar-card">
+          <h4>🎯 맞춤 추천 서비스</h4>
+          <div class="rec-cards">
+            <div class="rec-card">
+              <div class="icon">🏦</div>
+              <div class="name">청년 전세 대출</div>
+              <div class="desc">연 2.1%부터</div>
+            </div>
+            <div class="rec-card">
+              <div class="icon">📱</div>
+              <div class="name">토스 청년 적금</div>
+              <div class="desc">연 6% 특판</div>
+            </div>
+            <div class="rec-card">
+              <div class="icon">📖</div>
+              <div class="name">클래스101</div>
+              <div class="desc">배움카드 사용가</div>
+            </div>
+            <div class="rec-card">
+              <div class="icon">🧘</div>
+              <div class="name">마인드카페</div>
+              <div class="desc">심리상담 앱</div>
+            </div>
+          </div>
+        </div>
+
+
+
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ═══ SEARCH SCREEN ═══ -->
+
+
+</div><!-- /container -->
+<script src="main.js"></script>
+</body>
+</html>

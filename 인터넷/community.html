@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>베네픽 v2.0 — 커뮤니티</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- AI LOADING OVERLAY -->
+<div class="ai-loading" id="aiLoading">
+  <div class="ai-loading-card">
+    <div class="ai-spinner"></div>
+    <div class="ai-loading-text">
+      <h3>AI 분석 중입니다...</h3>
+      <p>입력하신 조건으로<br>수급 가능성을 계산하고 있어요</p>
+      <br>
+      <div class="ai-dots">
+        <span></span><span></span><span></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- NAV -->
+<nav>
+  <a href="index.html" class="nav-logo">
+    <div class="logo-mark">B</div>
+    <div class="logo-text">
+      <span class="logo-name">베네픽</span>
+      <span class="logo-tag">복지 수급 확률 분석 v2.0</span>
+    </div>
+  </a>
+  <div class="nav-center">
+    <a href="index.html">대시보드</a>
+    <a href="search.html">정책 검색</a>
+    <a href="analysis.html">상세 분석</a>
+    <a href="portfolio.html">포트폴리오</a>
+    <a href="apply.html">신청 보조</a>
+    <a href="community.html" class="active">커뮤니티</a>
+  </div>
+  <div class="nav-right">
+    <div id="langSelector" class="lang-selector">
+      <button id="langBtn" class="lang-btn" onclick="toggleLangDropdown()" aria-haspopup="true" aria-expanded="false">
+        <svg class="globe-svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10A15.3 15.3 0 0 1 12 2z"/>
+        </svg>
+        <span class="lang-label-text" id="currentLangLabel">한국어</span>
+        <svg class="lang-chevron" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div id="langDropdown" class="lang-dropdown">
+        <div class="lang-dropdown-inner">
+          <div class="lang-option active" onclick="selectLanguage(this, '한국어')">
+            <span class="lang-flag">🇰🇷</span><span>한국어</span>
+            <svg class="lang-check" viewBox="0 0 13 13" fill="none"><path d="M2 6.5l3.5 3.5 5.5-6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="lang-option" onclick="selectLanguage(this, 'English')"><span class="lang-flag">🇺🇸</span><span>English</span></div>
+          <div class="lang-divider"></div>
+          <div class="lang-option" onclick="selectLanguage(this, '日本語')"><span class="lang-flag">🇯🇵</span><span>日本語</span></div>
+          <div class="lang-option" onclick="selectLanguage(this, 'Tiếng Việt')"><span class="lang-flag">🇻🇳</span><span>Tiếng Việt</span></div>
+          <div class="lang-option" onclick="selectLanguage(this, '中文')"><span class="lang-flag">🇨🇳</span><span>中文</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="nav-avatar">
+      <div class="avatar-circle">남</div>
+      <span class="avatar-name">남정현님</span>
+      <span>▾</span>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+
+  <div class="screen active" id="screen-community">
+
+    <div id="comm-list-view">
+      <div class="comm-header">
+        <div>
+          <h2>💬 커뮤니티</h2>
+          <p>베네픽 사용자들의 수급 후기, 질문, 지역 정보를 나눠요</p>
+        </div>
+      </div>
+
+      <div class="comm-filter-bar">
+        <button class="comm-filter-btn active" onclick="filterComm('all', this)">🔥 전체</button>
+        <button class="comm-filter-btn" onclick="filterComm('popular', this)">⭐ 인기글</button>
+        <button class="comm-filter-btn" onclick="filterComm('qna', this)">❓ 질문/답변</button>
+        <button class="comm-filter-btn" onclick="filterComm('review', this)">🎉 수급 후기</button>
+        <button class="comm-filter-btn" onclick="filterComm('regional', this)">📍 지역 정보</button>
+        <button class="comm-filter-btn" onclick="filterComm('anonymous', this)">🤫 익명 고민</button>
+      </div>
+
+      <div class="comm-layout">
+        <div>
+          <div class="comm-post-list" id="commPostList"></div>
+          <div class="comm-empty" id="commEmpty" style="display:none;">
+            <div class="icon">📭</div>
+            <h4>아직 게시글이 없어요</h4>
+            <p>첫 번째 글을 작성해 보세요!</p>
+          </div>
+        </div>
+        <div class="comm-sidebar">
+
+          <!-- 실시간 정책 인사이트 위젯 -->
+          <div class="insight-widget">
+            <div class="insight-widget-header">
+              <div class="insight-widget-title">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#4A90E2" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                실시간 정책 인사이트
+              </div>
+              <button class="insight-refresh-btn" onclick="insightRefresh()">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                새로고침
+              </button>
+            </div>
+            <div class="insight-section-label">이번 주 가장 많이 조회된 정책 TOP 3</div>
+            <div class="insight-policy-row">
+              <div class="insight-policy-meta">
+                <span class="insight-policy-name">청년 월세 지원</span>
+                <span class="insight-policy-pct">85%</span>
+              </div>
+              <div class="insight-bar-track"><div class="insight-bar-fill" id="iBar1" style="width:0%"></div></div>
+            </div>
+            <div class="insight-policy-row">
+              <div class="insight-policy-meta">
+                <span class="insight-policy-name">중소기업 소득세 감면</span>
+                <span class="insight-policy-pct">62%</span>
+              </div>
+              <div class="insight-bar-track"><div class="insight-bar-fill" id="iBar2" style="width:0%"></div></div>
+            </div>
+            <div class="insight-policy-row">
+              <div class="insight-policy-meta">
+                <span class="insight-policy-name">내일배움카드</span>
+                <span class="insight-policy-pct">45%</span>
+              </div>
+              <div class="insight-bar-track"><div class="insight-bar-fill" id="iBar3" style="width:0%"></div></div>
+            </div>
+            <div class="insight-stats-row">
+              <div class="insight-stat-chip"><div class="val" id="iStatPosts">6</div><div class="lbl">총 게시글</div></div>
+              <div class="insight-stat-chip"><div class="val" id="iStatLikes">219</div><div class="lbl">누적 좋아요</div></div>
+              <div class="insight-stat-chip"><div class="val">98%</div><div class="lbl">긍정 후기율</div></div>
+            </div>
+            <div class="insight-divider"></div>
+            <div class="insight-review-header">
+              <div class="insight-review-label">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4A90E2" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                실제 수급자 한줄평
+              </div>
+              <span class="insight-badge-positive">긍정 98%</span>
+            </div>
+            <div id="iReviewList"></div>
+            <div class="insight-nav-dots" id="iNavDots"></div>
+          </div>
+
+          <div class="comm-sidebar-card">
+            <h4>🔥 주간 인기글</h4>
+            <div id="hotPostList"></div>
+          </div>
+          <div class="comm-sidebar-card" style="background:var(--blue-light);border-color:transparent;">
+            <h4 style="color:var(--blue-dark);">💡 AI 복지 팁</h4>
+            <p style="font-size:12px;color:var(--blue-dark);line-height:1.7;" id="aiTip">로딩 중...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 상세 보기 -->
+    <div id="comm-detail-view" style="display:none;">
+      <div class="comm-detail-back">
+        <button onclick="showCommList()">← 목록으로</button>
+        <span style="font-size:13px;color:var(--gray-500);">/ 게시글 상세</span>
+      </div>
+      <div class="comm-layout">
+        <div>
+          <div class="comm-detail-card" id="commDetailCard">
+            <!-- 동적으로 삽입됨 -->
+          </div>
+        </div>
+        <div class="comm-sidebar">
+          <div class="comm-sidebar-card">
+            <h4>🔥 다른 인기글도 보기</h4>
+            <div id="hotPostList2"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div><!-- /container -->
+
+<!-- FAB -->
+<button class="fab-write" id="fabWrite" onclick="openWriteModal()">✏️ 글쓰기</button>
+
+<!-- 글쓰기 모달 -->
+<div class="comm-modal-bg" id="writeModalBg" onclick="closeWriteModal(event)">
+  <div class="comm-modal">
+    <h3>✏️ 새 글 작성</h3>
+    <label>카테고리</label>
+    <select id="modalCat">
+      <option value="qna">❓ 질문/답변</option>
+      <option value="review">🎉 수급 후기</option>
+      <option value="regional">📍 지역 정보</option>
+      <option value="anonymous">🤫 익명 고민</option>
+    </select>
+    <label>지역 태그 (선택)</label>
+    <input type="text" id="modalRegion" placeholder="예: 서울 강남구, 부산 해운대구" />
+    <label>제목</label>
+    <input type="text" id="modalTitle" placeholder="제목을 입력하세요" maxlength="80" />
+    <label>내용</label>
+    <textarea id="modalContent" rows="6" placeholder="내용을 입력하세요. 복지 혜택과 관련된 경험이나 질문을 공유해 주세요!"></textarea>
+    <div class="comm-modal-actions">
+      <button class="btn-cancel" onclick="closeWriteModalDirect()">취소</button>
+      <button class="btn-primary" onclick="submitPost()">등록하기</button>
+    </div>
+  </div>
+</div>
+
+
+
+</div><!-- /container -->
+<script src="main.js"></script>
+</body>
+</html>

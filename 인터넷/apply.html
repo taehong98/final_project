@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>베네픽 v2.0 — 신청 보조</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- AI LOADING OVERLAY -->
+<div class="ai-loading" id="aiLoading">
+  <div class="ai-loading-card">
+    <div class="ai-spinner"></div>
+    <div class="ai-loading-text">
+      <h3>AI 분석 중입니다...</h3>
+      <p>입력하신 조건으로<br>수급 가능성을 계산하고 있어요</p>
+      <br>
+      <div class="ai-dots">
+        <span></span><span></span><span></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- NAV -->
+<nav>
+  <a href="index.html" class="nav-logo">
+    <div class="logo-mark">B</div>
+    <div class="logo-text">
+      <span class="logo-name">베네픽</span>
+      <span class="logo-tag">복지 수급 확률 분석 v2.0</span>
+    </div>
+  </a>
+  <div class="nav-center">
+    <a href="index.html">대시보드</a>
+    <a href="search.html">정책 검색</a>
+    <a href="analysis.html">상세 분석</a>
+    <a href="portfolio.html">포트폴리오</a>
+    <a href="apply.html" class="active">신청 보조</a>
+    <a href="community.html">커뮤니티</a>
+  </div>
+  <div class="nav-right">
+    <div id="langSelector" class="lang-selector">
+      <button id="langBtn" class="lang-btn" onclick="toggleLangDropdown()" aria-haspopup="true" aria-expanded="false">
+        <svg class="globe-svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10A15.3 15.3 0 0 1 12 2z"/>
+        </svg>
+        <span class="lang-label-text" id="currentLangLabel">한국어</span>
+        <svg class="lang-chevron" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div id="langDropdown" class="lang-dropdown">
+        <div class="lang-dropdown-inner">
+          <div class="lang-option active" onclick="selectLanguage(this, '한국어')">
+            <span class="lang-flag">🇰🇷</span><span>한국어</span>
+            <svg class="lang-check" viewBox="0 0 13 13" fill="none"><path d="M2 6.5l3.5 3.5 5.5-6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="lang-option" onclick="selectLanguage(this, 'English')"><span class="lang-flag">🇺🇸</span><span>English</span></div>
+          <div class="lang-divider"></div>
+          <div class="lang-option" onclick="selectLanguage(this, '日本語')"><span class="lang-flag">🇯🇵</span><span>日本語</span></div>
+          <div class="lang-option" onclick="selectLanguage(this, 'Tiếng Việt')"><span class="lang-flag">🇻🇳</span><span>Tiếng Việt</span></div>
+          <div class="lang-option" onclick="selectLanguage(this, '中文')"><span class="lang-flag">🇨🇳</span><span>中文</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="nav-avatar">
+      <div class="avatar-circle">남</div>
+      <span class="avatar-name">남정현님</span>
+      <span>▾</span>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+
+  <div class="screen active" id="screen-apply">
+
+    <!-- Progress flow -->
+    <div class="flow-steps">
+      <div class="flow-step done">
+        <div class="num">✓</div>
+        <span class="label">정보 입력</span>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step done">
+        <div class="num">✓</div>
+        <span class="label">AI 분석</span>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step done">
+        <div class="num">✓</div>
+        <span class="label">원인 파악</span>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step active">
+        <div class="num">4</div>
+        <span class="label">서류 준비</span>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">
+        <div class="num">5</div>
+        <span class="label">신청 완료</span>
+      </div>
+    </div>
+
+    <div class="grid-main">
+      <div>
+        <div class="section-title">
+          <h3>📄 필요 서류 카드</h3>
+          <span style="font-size:13px;color:var(--gray-500);">청년 월세 지원 기준</span>
+        </div>
+
+        <div class="doc-cards">
+          <div class="doc-card ready">
+            <div class="doc-icon">🪪</div>
+            <div class="doc-info">
+              <h5>주민등록등본</h5>
+              <p>✅ 준비 완료 · 3개월 이내</p>
+            </div>
+            <div class="doc-status">✅</div>
+          </div>
+          <div class="doc-card ready">
+            <div class="doc-icon">💰</div>
+            <div class="doc-info">
+              <h5>소득 증빙서류</h5>
+              <p>✅ 건강보험료 납부확인서</p>
+            </div>
+            <div class="doc-status">✅</div>
+          </div>
+          <div class="doc-card" onclick="this.classList.add('ready');this.querySelector('.doc-status').textContent='✅';this.querySelector('.doc-info p').textContent='✅ 준비 완료'">
+            <div class="doc-icon">🏠</div>
+            <div class="doc-info">
+              <h5>임대차 계약서</h5>
+              <p>⬜ 미준비 · 원본 + 사본</p>
+            </div>
+            <div class="doc-status">⬜</div>
+          </div>
+          <div class="doc-card" onclick="this.classList.add('ready');this.querySelector('.doc-status').textContent='✅';this.querySelector('.doc-info p').textContent='✅ 준비 완료'">
+            <div class="doc-icon">🏦</div>
+            <div class="doc-info">
+              <h5>통장 사본</h5>
+              <p>⬜ 미준비 · 수급 계좌</p>
+            </div>
+            <div class="doc-status">⬜</div>
+          </div>
+        </div>
+
+        <div style="margin-bottom:24px;">
+          <div class="section-title">
+            <h3>☑️ 신청 체크리스트</h3>
+          </div>
+          <div class="input-card" style="padding:20px 24px;">
+            <div class="checklist">
+              <div class="check-item done" onclick="toggleCheck(this)">
+                <div class="check-box">✓</div>
+                <span class="check-text">신청자 기본 정보 입력 완료</span>
+              </div>
+              <div class="check-item done" onclick="toggleCheck(this)">
+                <div class="check-box">✓</div>
+                <span class="check-text">소득 증빙서류 제출</span>
+              </div>
+              <div class="check-item done" onclick="toggleCheck(this)">
+                <div class="check-box">✓</div>
+                <span class="check-text">주민등록 전입신고 확인</span>
+              </div>
+              <div class="check-item" onclick="toggleCheck(this)">
+                <div class="check-box"></div>
+                <span class="check-text">임대차 계약서 업로드</span>
+              </div>
+              <div class="check-item" onclick="toggleCheck(this)">
+                <div class="check-box"></div>
+                <span class="check-text">수급 계좌 등록</span>
+              </div>
+              <div class="check-item" onclick="toggleCheck(this)">
+                <div class="check-box"></div>
+                <span class="check-text">신청서 최종 제출</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="cta-section">
+          <div class="cta-text">
+            <h3>🏠 청년 월세 지원 신청하기</h3>
+            <p>복지로(bokjiro.go.kr)에서 3분 만에 완료</p>
+          </div>
+          <button class="cta-btn">
+            🚀 신청하러 가기
+          </button>
+        </div>
+      </div>
+
+      <div class="sidebar">
+        <div class="sidebar-card">
+          <h4>📊 신청 현황</h4>
+          <div class="stat-grid">
+            <div class="stat-item"><div class="val green">3/6</div><div class="lbl">서류 준비</div></div>
+            <div class="stat-item"><div class="val blue">50%</div><div class="lbl">진행률</div></div>
+          </div>
+          <div style="margin-top:12px;">
+            <div class="progress-track" style="height:10px;">
+              <div class="progress-fill blue" style="width:50%"></div>
+            </div>
+            <p style="font-size:11px;color:var(--gray-500);margin-top:6px;text-align:center;">서류 2개 더 준비하면 신청 가능!</p>
+          </div>
+        </div>
+
+        <div class="sidebar-card">
+          <h4>💡 신청 팁</h4>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div style="background:var(--blue-light);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--blue-dark);font-weight:500;line-height:1.5;">
+              📅 <strong>신청 기한:</strong> 2025년 12월 31일까지 접수 마감
+            </div>
+            <div style="background:var(--green-light);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--green-dark);font-weight:500;line-height:1.5;">
+              ⚡ <strong>빠른 처리:</strong> 온라인 신청 시 처리 기간 단축 (평균 18일)
+            </div>
+            <div style="background:var(--orange-light);border-radius:8px;padding:10px 12px;font-size:12px;color:#B7770D;font-weight:500;line-height:1.5;">
+              ⚠️ <strong>주의:</strong> 전입신고 없으면 100% 탈락. 반드시 사전 완료 필수!
+            </div>
+          </div>
+        </div>
+
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ COMMUNITY SCREEN ═══ -->
+
+
+</div><!-- /container -->
+<script src="main.js"></script>
+</body>
+</html>

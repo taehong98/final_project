@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>베네픽 v2.0 — 상세 분석</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- AI LOADING OVERLAY -->
+<div class="ai-loading" id="aiLoading">
+  <div class="ai-loading-card">
+    <div class="ai-spinner"></div>
+    <div class="ai-loading-text">
+      <h3>AI 분석 중입니다...</h3>
+      <p>입력하신 조건으로<br>수급 가능성을 계산하고 있어요</p>
+      <br>
+      <div class="ai-dots">
+        <span></span><span></span><span></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- NAV -->
+<nav>
+  <a href="index.html" class="nav-logo">
+    <div class="logo-mark">B</div>
+    <div class="logo-text">
+      <span class="logo-name">베네픽</span>
+      <span class="logo-tag">복지 수급 확률 분석 v2.0</span>
+    </div>
+  </a>
+  <div class="nav-center">
+    <a href="index.html">대시보드</a>
+    <a href="search.html">정책 검색</a>
+    <a href="analysis.html" class="active">상세 분석</a>
+    <a href="portfolio.html">포트폴리오</a>
+    <a href="apply.html">신청 보조</a>
+    <a href="community.html">커뮤니티</a>
+  </div>
+  <div class="nav-right">
+    <div id="langSelector" class="lang-selector">
+      <button id="langBtn" class="lang-btn" onclick="toggleLangDropdown()" aria-haspopup="true" aria-expanded="false">
+        <svg class="globe-svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10A15.3 15.3 0 0 1 12 2z"/>
+        </svg>
+        <span class="lang-label-text" id="currentLangLabel">한국어</span>
+        <svg class="lang-chevron" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div id="langDropdown" class="lang-dropdown">
+        <div class="lang-dropdown-inner">
+          <div class="lang-option active" onclick="selectLanguage(this, '한국어')">
+            <span class="lang-flag">🇰🇷</span><span>한국어</span>
+            <svg class="lang-check" viewBox="0 0 13 13" fill="none"><path d="M2 6.5l3.5 3.5 5.5-6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="lang-option" onclick="selectLanguage(this, 'English')"><span class="lang-flag">🇺🇸</span><span>English</span></div>
+          <div class="lang-divider"></div>
+          <div class="lang-option" onclick="selectLanguage(this, '日本語')"><span class="lang-flag">🇯🇵</span><span>日本語</span></div>
+          <div class="lang-option" onclick="selectLanguage(this, 'Tiếng Việt')"><span class="lang-flag">🇻🇳</span><span>Tiếng Việt</span></div>
+          <div class="lang-option" onclick="selectLanguage(this, '中文')"><span class="lang-flag">🇨🇳</span><span>中文</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="nav-avatar">
+      <div class="avatar-circle">남</div>
+      <span class="avatar-name">남정현님</span>
+      <span>▾</span>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+
+  <div class="screen active" id="screen-detail">
+    <div class="grid-main">
+      <div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;">
+          <button onclick="showTab('dashboard')" style="background:var(--gray-100);border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;color:var(--gray-700);cursor:pointer;display:flex;align-items:center;gap:5px;">← 목록으로</button>
+          <span style="font-size:14px;color:var(--gray-500);">/ 상세 분석</span>
+        </div>
+
+        <!-- Detail Card -->
+        <div class="detail-panel visible" id="detail-panel-main">
+          <div class="detail-header">
+            <div class="detail-icon">🏠</div>
+            <div class="detail-title" style="flex:1;">
+              <h3 id="detail-policy-name">청년 월세 한시 특별지원</h3>
+              <div class="detail-prob">
+                <span class="pct" id="detail-pct">92</span><span style="font-size:28px;font-weight:800;color:var(--green);">%</span>
+                <span class="label">수급 확률</span>
+              </div>
+              <div style="margin-top:8px;">
+                <div class="progress-track" style="height:10px;">
+                  <div class="progress-fill green" id="detail-bar" style="width:92%"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 원문 발췌 박스 -->
+          <div class="ai-summary-box" id="ai-summary-box">
+            <div class="ai-summary-box-header">
+              <div class="ai-summary-badge">📄 원문 발췌</div>
+            </div>
+            <div id="ai-summary-content">
+              <div class="ai-summary-loading">
+                <div class="ai-summary-spinner"></div>
+                <span>원문 데이터를 불러오고 있어요...</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="analysis-section" id="detail-issue-section">
+            <div class="analysis-label">❌ 탈락 예상 이유</div>
+            <div class="issue-item">
+              <span class="icon">⚠️</span>
+              <p><strong>주민등록 전입 미완료:</strong> 현재 거주지 주민등록이 신청 주소와 일치하지 않을 수 있습니다. 서류 심사 시 탈락 요인이 될 수 있습니다.</p>
+            </div>
+            <div class="issue-item">
+              <span class="icon">📋</span>
+              <p><strong>임대차 계약서 미비:</strong> 월세 계약 기간이 남은 계약서 원본 및 확정일자 필요합니다.</p>
+            </div>
+          </div>
+
+          <div class="analysis-section" id="detail-guide-section">
+            <div class="analysis-label">💡 해결 방법 & 행동 가이드</div>
+            <div class="guide-item">
+              <span class="icon">✅</span>
+              <p><strong>1단계: 전입신고 완료하기</strong> — 거주지 주민센터를 방문하여 현 주소로 전입신고를 진행하세요. 처리 기간: 당일</p>
+            </div>
+            <div class="guide-item">
+              <span class="icon">📎</span>
+              <p><strong>2단계: 임대차 계약서 확인</strong> — 계약서에 확정일자 도장이 찍혀 있는지 확인하고, 없다면 주민센터 방문 시 동시에 신청하세요.</p>
+            </div>
+            <div class="guide-item">
+              <span class="icon">🚀</span>
+              <p><strong>3단계: 복지로에서 온라인 신청</strong> — 위 서류 준비 후 bokjiro.go.kr에서 신청서를 제출하세요. 30일 이내 결과를 통보받습니다.</p>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:10px;margin-top:4px;">
+            <button class="btn-primary btn-green" style="flex:1;padding:12px;font-size:14px;justify-content:center;" onclick="showTab('apply')">
+              📋 신청 보조 시작하기 →
+            </button>
+            <button class="btn-primary" style="background:var(--gray-100);color:var(--gray-700);flex:none;padding:12px 16px;" onclick="showTab('dashboard')">
+              목록
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sidebar same -->
+      <div class="sidebar">
+        <div class="sidebar-card">
+          <h4>📊 이 정책 요약</h4>
+          <div class="stat-grid">
+            <div class="stat-item"><div class="val green">92%</div><div class="lbl">수급 확률</div></div>
+            <div class="stat-item"><div class="val blue">240만</div><div class="lbl">연간 혜택</div></div>
+            <div class="stat-item"><div class="val green">1개월</div><div class="lbl">처리 기간</div></div>
+            <div class="stat-item"><div class="val blue">2건</div><div class="lbl">해결 필요</div></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ PORTFOLIO SCREEN ═══ -->
+
+
+</div><!-- /container -->
+<script src="main.js"></script>
+</body>
+</html>

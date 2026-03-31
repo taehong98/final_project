@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>베네픽 v2.0 — 정책 검색</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- AI LOADING OVERLAY -->
+<div class="ai-loading" id="aiLoading">
+  <div class="ai-loading-card">
+    <div class="ai-spinner"></div>
+    <div class="ai-loading-text">
+      <h3>AI 분석 중입니다...</h3>
+      <p>입력하신 조건으로<br>수급 가능성을 계산하고 있어요</p>
+      <br>
+      <div class="ai-dots">
+        <span></span><span></span><span></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- NAV -->
+<nav>
+  <a href="index.html" class="nav-logo">
+    <div class="logo-mark">B</div>
+    <div class="logo-text">
+      <span class="logo-name">베네픽</span>
+      <span class="logo-tag">복지 수급 확률 분석 v2.0</span>
+    </div>
+  </a>
+  <div class="nav-center">
+    <a href="index.html">대시보드</a>
+    <a href="search.html" class="active">정책 검색</a>
+    <a href="analysis.html">상세 분석</a>
+    <a href="portfolio.html">포트폴리오</a>
+    <a href="apply.html">신청 보조</a>
+    <a href="community.html">커뮤니티</a>
+  </div>
+  <div class="nav-right">
+    <div id="langSelector" class="lang-selector">
+      <button id="langBtn" class="lang-btn" onclick="toggleLangDropdown()" aria-haspopup="true" aria-expanded="false">
+        <svg class="globe-svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10A15.3 15.3 0 0 1 12 2z"/>
+        </svg>
+        <span class="lang-label-text" id="currentLangLabel">한국어</span>
+        <svg class="lang-chevron" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div id="langDropdown" class="lang-dropdown">
+        <div class="lang-dropdown-inner">
+          <div class="lang-option active" onclick="selectLanguage(this, '한국어')">
+            <span class="lang-flag">🇰🇷</span><span>한국어</span>
+            <svg class="lang-check" viewBox="0 0 13 13" fill="none"><path d="M2 6.5l3.5 3.5 5.5-6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="lang-option" onclick="selectLanguage(this, 'English')"><span class="lang-flag">🇺🇸</span><span>English</span></div>
+          <div class="lang-divider"></div>
+          <div class="lang-option" onclick="selectLanguage(this, '日本語')"><span class="lang-flag">🇯🇵</span><span>日本語</span></div>
+          <div class="lang-option" onclick="selectLanguage(this, 'Tiếng Việt')"><span class="lang-flag">🇻🇳</span><span>Tiếng Việt</span></div>
+          <div class="lang-option" onclick="selectLanguage(this, '中文')"><span class="lang-flag">🇨🇳</span><span>中文</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="nav-avatar">
+      <div class="avatar-circle">남</div>
+      <span class="avatar-name">남정현님</span>
+      <span>▾</span>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+
+  <div class="screen active" id="screen-search">
+    <div style="max-width:860px;margin:0 auto;padding:8px 0 40px">
+      <div style="margin-bottom:24px">
+        <h2 style="font-size:22px;font-weight:800;color:var(--gray-900);margin-bottom:6px">🔍 정책 통합 검색</h2>
+        <p style="font-size:14px;color:var(--gray-500)">키워드 검색 또는 자연어로 원하는 복지 정책을 찾아보세요.</p>
+      </div>
+      <div style="background:var(--white);border:1px solid var(--gray-200);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow-sm);margin-bottom:16px">
+        <div style="display:flex;gap:10px;align-items:center">
+          <input id="search-input"
+            placeholder="예: 청년 월세, 취업 후 생계 지원, 장애인 활동지원 받고 싶어요"
+            onkeydown="if(event.key==='Enter') doSearch()"
+            style="flex:1;border:1px solid var(--gray-200);border-radius:10px;
+                   padding:12px 16px;font-size:14px;font-family:inherit;outline:none;
+                   background:var(--gray-50);color:var(--gray-900);transition:all .15s">
+          <button onclick="doSearch()"
+            style="background:linear-gradient(135deg,var(--blue),var(--blue-dark));
+                   color:#fff;border:none;border-radius:10px;padding:12px 24px;
+                   font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;
+                   white-space:nowrap;box-shadow:0 2px 8px rgba(74,144,226,.3)">
+            🔍 검색
+          </button>
+        </div>
+        <div style="margin-top:12px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+          <span style="font-size:12px;color:var(--gray-500);font-weight:600">빠른 검색:</span>
+          <span id="quick-tags" style="display:flex;gap:5px;flex-wrap:wrap"></span>
+        </div>
+      </div>
+      <div id="search-status" style="font-size:13px;color:var(--gray-500);margin-bottom:12px;min-height:18px"></div>
+      <div id="search-results"></div>
+      <div id="search-pagination" style="display:none;margin-top:20px;text-align:center"></div>
+      <div id="search-browse-wrap">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+          <h3 style="font-size:15px;font-weight:700;color:var(--gray-900)">
+            📋 전체 복지 정책 목록
+            <span id="browse-total-badge" style="font-size:12px;font-weight:500;color:var(--gray-500)"></span>
+          </h3>
+        </div>
+        <div id="browse-list"></div>
+        <div id="browse-pagination" style="margin-top:20px;text-align:center"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ DETAIL SCREEN ═══ -->
+
+
+</div><!-- /container -->
+<script src="main.js"></script>
+</body>
+</html>
