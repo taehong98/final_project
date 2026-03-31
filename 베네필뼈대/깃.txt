@@ -1,0 +1,10 @@
+https://github.com/taehong98/final_project.git
+PS C:\Users\남정현> git fetch origin
+git checkout main
+git checkout njh
+git branch
+git add .
+git commit -m "작업 완료 메시지"
+git merge [내-브랜치-이름]
+git push origin main
+git push origin feat/njh

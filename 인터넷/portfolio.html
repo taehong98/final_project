@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>베네픽 v2.0 — 포트폴리오</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- AI LOADING OVERLAY -->
+<div class="ai-loading" id="aiLoading">
+  <div class="ai-loading-card">
+    <div class="ai-spinner"></div>
+    <div class="ai-loading-text">
+      <h3>AI 분석 중입니다...</h3>
+      <p>입력하신 조건으로<br>수급 가능성을 계산하고 있어요</p>
+      <br>
+      <div class="ai-dots">
+        <span></span><span></span><span></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- NAV -->
+<nav>
+  <a href="index.html" class="nav-logo">
+    <div class="logo-mark">B</div>
+    <div class="logo-text">
+      <span class="logo-name">베네픽</span>
+      <span class="logo-tag">복지 수급 확률 분석 v2.0</span>
+    </div>
+  </a>
+  <div class="nav-center">
+    <a href="index.html">대시보드</a>
+    <a href="search.html">정책 검색</a>
+    <a href="analysis.html">상세 분석</a>
+    <a href="portfolio.html" class="active">포트폴리오</a>
+    <a href="apply.html">신청 보조</a>
+    <a href="community.html">커뮤니티</a>
+  </div>
+  <div class="nav-right">
+    <div id="langSelector" class="lang-selector">
+      <button id="langBtn" class="lang-btn" onclick="toggleLangDropdown()" aria-haspopup="true" aria-expanded="false">
+        <svg class="globe-svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10A15.3 15.3 0 0 1 12 2z"/>
+        </svg>
+        <span class="lang-label-text" id="currentLangLabel">한국어</span>
+        <svg class="lang-chevron" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div id="langDropdown" class="lang-dropdown">
+        <div class="lang-dropdown-inner">
+          <div class="lang-option active" onclick="selectLanguage(this, '한국어')">
+            <span class="lang-flag">🇰🇷</span><span>한국어</span>
+            <svg class="lang-check" viewBox="0 0 13 13" fill="none"><path d="M2 6.5l3.5 3.5 5.5-6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="lang-option" onclick="selectLanguage(this, 'English')"><span class="lang-flag">🇺🇸</span><span>English</span></div>
+          <div class="lang-divider"></div>
+          <div class="lang-option" onclick="selectLanguage(this, '日本語')"><span class="lang-flag">🇯🇵</span><span>日本語</span></div>
+          <div class="lang-option" onclick="selectLanguage(this, 'Tiếng Việt')"><span class="lang-flag">🇻🇳</span><span>Tiếng Việt</span></div>
+          <div class="lang-option" onclick="selectLanguage(this, '中文')"><span class="lang-flag">🇨🇳</span><span>中文</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="nav-avatar">
+      <div class="avatar-circle">남</div>
+      <span class="avatar-name">남정현님</span>
+      <span>▾</span>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+
+  <div class="screen active" id="screen-portfolio">
+    <div class="portfolio-hero">
+      <div style="position:relative;z-index:1;">
+        <p style="font-size:14px;color:rgba(255,255,255,.5);margin-bottom:8px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;">총 예상 연간 수혜액</p>
+        <div class="big-num">1,040만원</div>
+        <p>최적 조합 12개 정책 기준 · 남정현님 맞춤 분석</p>
+        <div style="display:flex;justify-content:center;gap:12px;margin-top:16px;">
+          <span style="background:rgba(46,204,113,.2);border:1px solid rgba(46,204,113,.3);color:var(--green);font-size:12px;font-weight:600;padding:5px 14px;border-radius:20px;">✅ 즉시 신청 가능 3건</span>
+          <span style="background:rgba(74,144,226,.2);border:1px solid rgba(74,144,226,.3);color:#7EC8E3;font-size:12px;font-weight:600;padding:5px 14px;border-radius:20px;">⚡ 조건 보완 후 5건</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-title">
+      <h3>💼 최적 복지 포트폴리오</h3>
+      <a href="#">정책 추가하기 +</a>
+    </div>
+
+    <div class="port-grid">
+      <div class="port-grid-card">
+        <div class="icon">🏠</div>
+        <h4>청년 월세 특별지원</h4>
+        <div class="amount">240만원</div>
+        <div class="period">월 20만원 × 12개월</div>
+        <div style="margin-top:10px;"><span class="badge badge-green">즉시 신청</span></div>
+      </div>
+      <div class="port-grid-card">
+        <div class="icon">📚</div>
+        <h4>국민내일배움카드</h4>
+        <div class="amount">500만원</div>
+        <div class="period">훈련비 전액 지원</div>
+        <div style="margin-top:10px;"><span class="badge badge-green">즉시 신청</span></div>
+      </div>
+      <div class="port-grid-card">
+        <div class="icon">🏥</div>
+        <h4>청년 마음건강 지원</h4>
+        <div class="amount">80만원</div>
+        <div class="period">상담 10회 × 8만원</div>
+        <div style="margin-top:10px;"><span class="badge badge-green">즉시 신청</span></div>
+      </div>
+      <div class="port-grid-card">
+        <div class="icon">💰</div>
+        <h4>청년도약계좌</h4>
+        <div class="amount">70만원/년</div>
+        <div class="period">정부기여금 포함</div>
+        <div style="margin-top:10px;"><span class="badge badge-blue">조건 확인 필요</span></div>
+      </div>
+      <div class="port-grid-card">
+        <div class="icon">🎓</div>
+        <h4>청년 취업아카데미</h4>
+        <div class="amount">150만원</div>
+        <div class="period">교육비 + 수당</div>
+        <div style="margin-top:10px;"><span class="badge badge-blue">조건 확인 필요</span></div>
+      </div>
+      <div class="port-grid-card" style="background:var(--gray-50);border-style:dashed;cursor:pointer;" onclick="alert('더 많은 정책을 분석합니다!')">
+        <div class="icon">➕</div>
+        <h4 style="color:var(--gray-500);">정책 더 추가하기</h4>
+        <div class="amount" style="color:var(--gray-300);font-size:14px">최대 12개까지</div>
+        <div class="period" style="color:var(--gray-400)">분석 가능</div>
+      </div>
+    </div>
+
+    <div class="cta-section">
+      <div class="cta-text">
+        <h3>🚀 이 조합으로 지금 바로 신청하세요!</h3>
+        <p>총 1,040만원 혜택을 한 번에 챙길 수 있어요</p>
+      </div>
+      <button class="cta-btn" onclick="showTab('apply')">
+        📋 신청 보조 시작하기 <span>›</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══ APPLY SCREEN ═══ -->
+
+
+</div><!-- /container -->
+<script src="main.js"></script>
+</body>
+</html>
