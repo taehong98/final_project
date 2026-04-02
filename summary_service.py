@@ -7,27 +7,10 @@ from typing import Dict, List, Optional
 
 from dotenv import load_dotenv
 
+from prompt_builder import PromptBuilder
+
 
 class PolicySummaryService:
-    DEFAULT_SUMMARY_PROMPT = """너는 대한민국 복지 정책 요약 도우미다.
-
-[목표]
-- 복지 정책 원문을 일반 사용자도 이해하기 쉽게 3~5문장으로 요약한다.
-
-[스타일]
-- 쉬운 한국어로 쓴다.
-- 핵심 정보만 남긴다.
-- 불필요하게 길게 쓰지 않는다.
-- 추측하지 않는다.
-
-[핵심 규칙]
-1. 정책 원문에 있는 정보만 사용한다.
-2. 정책 원문에 없는 기관, 금액, 기간, 자격, 서류를 추가하지 않는다.
-3. 반드시 한국어 JSON만 출력한다.
-4. 출력 키는 반드시 summary만 사용한다.
-5. summary는 3~5문장으로 작성한다.
-"""
-
     def __init__(
         self,
         model_name: Optional[str] = None,
@@ -41,25 +24,15 @@ class PolicySummaryService:
         self.base_url = (base_url or os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")).rstrip("/")
         self.timeout = float(timeout or os.getenv("OLLAMA_TIMEOUT", "300"))
         self.prompt_path = prompt_path or os.getenv("SUMMARY_PROMPT_PATH", "prompts/prompt_summary.txt")
-        self.summary_prompt_base = self._load_summary_prompt_base()
+
+        prompt_dir = os.path.dirname(self.prompt_path) or "prompts"
+        summary_filename = os.path.basename(self.prompt_path) or "prompt_summary.txt"
+        self.prompt_builder = PromptBuilder(
+            prompt_dir=prompt_dir,
+            summary_filename=summary_filename,
+        )
 
         print(f"📝 요약 모델({self.model_name}) 준비 완료")
-
-    def _load_summary_prompt_base(self) -> str:
-        path = str(self.prompt_path or "").strip()
-        if not path:
-            return self.DEFAULT_SUMMARY_PROMPT
-
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                content = f.read().strip()
-            return content or self.DEFAULT_SUMMARY_PROMPT
-        except FileNotFoundError:
-            print(f"⚠️ 요약 프롬프트 파일을 찾지 못해 기본 프롬프트를 사용합니다: {path}")
-            return self.DEFAULT_SUMMARY_PROMPT
-        except Exception as exc:
-            print(f"⚠️ 요약 프롬프트 파일 로드 실패로 기본 프롬프트를 사용합니다: {exc}")
-            return self.DEFAULT_SUMMARY_PROMPT
 
     def _post_to_ollama(self, payload: Dict) -> Dict:
         url = self.base_url + "/api/chat"
@@ -120,29 +93,8 @@ class PolicySummaryService:
         if not policy_text:
             raise ValueError("policy_text가 비어 있습니다.")
 
-        schema = {
-            "type": "object",
-            "properties": {
-                "summary": {"type": "string"},
-            },
-            "required": ["summary"],
-            "additionalProperties": False,
-        }
-
-        prompt = f"""
-{self.summary_prompt_base}
-
-[정책 원문]
-{policy_text}
-""".strip()
-
-        messages = [
-            {
-                "role": "system",
-                "content": "Return only valid JSON matching the schema. Use Korean only. Key must be summary.",
-            },
-            {"role": "user", "content": prompt},
-        ]
+        messages = self.prompt_builder.build_summary_messages(policy_text)
+        schema = self.prompt_builder.get_summary_schema()
 
         data = self._call_model_json(messages, schema)
         summary = str(data.get("summary", "")).strip()

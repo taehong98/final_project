@@ -1,12 +1,13 @@
 import json
 import os
-import re
 import urllib.error
 import urllib.request
 from typing import Dict, List, Optional
 
 import pandas as pd
 from dotenv import load_dotenv
+
+from prompt_builder import PromptBuilder
 
 
 class PolicyTranslationService:
@@ -27,19 +28,6 @@ class PolicyTranslationService:
         "ja": "일본어",
     }
 
-    DEFAULT_TRANSLATION_PROMPT = """너는 대한민국 복지 정책 번역 도우미다.
-
-[목표]
-- 한국어 복지 정책 설명 문장을 지정된 언어로 자연스럽고 정확하게 번역한다.
-
-[핵심 규칙]
-1. 원문의 의미를 추가하거나 삭제하지 않는다.
-2. 한국어를 섞지 않는다.
-3. 용어 사전이 있으면 우선 반영한다.
-4. 반드시 JSON만 출력한다.
-5. 출력 키는 반드시 translated_text만 사용한다.
-"""
-
     def __init__(
         self,
         csv_path: str = "benepick_dict.csv",
@@ -56,9 +44,14 @@ class PolicyTranslationService:
         self.prompt_path = prompt_path or os.getenv("TRANSLATION_PROMPT_PATH", "prompts/prompt_translation.txt")
 
         self.glossary_df = self._load_glossary(csv_path)
-        self.translation_prompt_base = self._load_translation_prompt_base()
+        self.prompt_builder = self._build_prompt_builder()
 
         print(f"🌐 번역 모델({self.model_name}) 준비 완료")
+
+    def _build_prompt_builder(self) -> PromptBuilder:
+        prompt_dir = os.path.dirname(self.prompt_path) or "prompts"
+        translation_filename = os.path.basename(self.prompt_path) or "prompt_translation.txt"
+        return PromptBuilder(prompt_dir=prompt_dir, translation_filename=translation_filename)
 
     def _load_glossary(self, csv_path: str) -> pd.DataFrame:
         try:
@@ -75,18 +68,6 @@ class PolicyTranslationService:
             df[col] = df[col].astype(str).str.strip()
 
         return df[df["행정 용어"] != ""].reset_index(drop=True)
-
-    def _load_translation_prompt_base(self) -> str:
-        path = str(self.prompt_path or "").strip()
-        if not path:
-            return self.DEFAULT_TRANSLATION_PROMPT
-
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                content = f.read().strip()
-            return content or self.DEFAULT_TRANSLATION_PROMPT
-        except Exception:
-            return self.DEFAULT_TRANSLATION_PROMPT
 
     def _extract_relevant_glossary(self, text: str, target_lang: str) -> str:
         if target_lang == "ko":
@@ -153,6 +134,7 @@ class PolicyTranslationService:
 
     def translate_text(self, text: str, policy_text: str, target_lang: str) -> Dict[str, str]:
         text = str(text or "").strip()
+        policy_text = str(policy_text or "")
         target_lang = str(target_lang or "ko").strip().lower()
 
         if not text:
@@ -168,37 +150,12 @@ class PolicyTranslationService:
             }
 
         glossary_str = self._extract_relevant_glossary(policy_text, target_lang)
-        lang_name = self.LANG_MAP[target_lang]
-
-        schema = {
-            "type": "object",
-            "properties": {
-                "translated_text": {"type": "string"},
-            },
-            "required": ["translated_text"],
-            "additionalProperties": False,
-        }
-
-        prompt = f"""
-{self.translation_prompt_base}
-
-[목표 언어]
-{lang_name}
-
-[용어 사전]
-{glossary_str if glossary_str else "해당 문서에 매핑되는 용어 없음"}
-
-[원문]
-{text}
-""".strip()
-
-        messages = [
-            {
-                "role": "system",
-                "content": f"Return only valid JSON matching the schema. Use only {lang_name}.",
-            },
-            {"role": "user", "content": prompt},
-        ]
+        schema = self.prompt_builder.get_translation_schema()
+        messages = self.prompt_builder.build_translation_messages(
+            text=text,
+            target_lang=target_lang,
+            glossary_text=glossary_str,
+        )
 
         data = self._call_model_json(messages, schema)
         translated_text = str(data.get("translated_text", "")).strip()

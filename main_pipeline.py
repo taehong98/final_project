@@ -1,8 +1,9 @@
 import json
 from typing import Dict, Optional
 
-from rule_engine import PolicyRuleEngine
+from output_guard import OutputGuard
 from qwen_reasoner import QwenReasoner
+from rule_engine import PolicyRuleEngine
 from summary_service import PolicySummaryService
 from translation_service import PolicyTranslationService
 
@@ -14,6 +15,7 @@ class BenePickPipeline:
         self.reasoner = QwenReasoner(csv_path=csv_path)
         self.summary_service = PolicySummaryService()
         self.translation_service = PolicyTranslationService(csv_path=csv_path)
+        self.output_guard = OutputGuard()
         print("=== 초기화 완료! ===")
 
     def _rule_result_to_analysis(self, rule_result, source: str) -> Dict[str, str]:
@@ -52,10 +54,9 @@ class BenePickPipeline:
         rule_result,
         target_lang: str,
     ) -> Dict[str, str]:
-        # 룰 엔진에서 명확 탈락이면 그대로 사용
         if getattr(rule_result, "eligible", None) is False:
             result = self._rule_result_to_analysis(rule_result, "rule_engine")
-            result["language"] = target_lang
+            result["language"] = "ko"
             return result
 
         try:
@@ -70,7 +71,7 @@ class BenePickPipeline:
         except Exception as exc:
             print(f"⚠️ Qwen 분석 실패. 룰 엔진 결과로 폴백합니다: {exc}")
             fallback = self._rule_result_to_analysis(rule_result, "rule_engine_fallback")
-            fallback["language"] = target_lang
+            fallback["language"] = "ko"
 
             if not fallback["rejection_reason"]:
                 fallback["rejection_reason"] = "판정 가능한 핵심 조건을 추가로 확인해야 합니다."
@@ -111,6 +112,64 @@ class BenePickPipeline:
                 "translation_source": "fallback",
             }
 
+    def _translate_analysis_fields_with_fallback(
+        self,
+        analyzed: Dict[str, str],
+        policy_text: str,
+        target_lang: str,
+    ) -> Dict[str, str]:
+        target_lang = str(target_lang or "ko").strip().lower() or "ko"
+        result = dict(analyzed or {})
+
+        if target_lang == "ko":
+            result["language"] = "ko"
+            return result
+
+        rejection_reason = str(result.get("rejection_reason", "") or "").strip()
+        guide = str(result.get("guide", "") or "").strip()
+
+        if not rejection_reason and not guide:
+            result["language"] = target_lang
+            return result
+
+        combined = f"{rejection_reason} {guide}".strip()
+        if combined and self.output_guard.looks_like_target_language(combined, target_lang):
+            result["language"] = target_lang
+            return result
+
+        translated_any = False
+
+        if rejection_reason:
+            try:
+                rr = self.translation_service.translate_text(
+                    text=rejection_reason,
+                    policy_text=policy_text,
+                    target_lang=target_lang,
+                )
+                translated_rr = str(rr.get("translated_text", "") or "").strip()
+                if translated_rr and self.output_guard.looks_like_target_language(translated_rr, target_lang):
+                    result["rejection_reason"] = translated_rr
+                    translated_any = True
+            except Exception as exc:
+                print(f"⚠️ rejection_reason 번역 실패. 기존 값을 유지합니다: {exc}")
+
+        if guide:
+            try:
+                gd = self.translation_service.translate_text(
+                    text=guide,
+                    policy_text=policy_text,
+                    target_lang=target_lang,
+                )
+                translated_gd = str(gd.get("translated_text", "") or "").strip()
+                if translated_gd and self.output_guard.looks_like_target_language(translated_gd, target_lang):
+                    result["guide"] = translated_gd
+                    translated_any = True
+            except Exception as exc:
+                print(f"⚠️ guide 번역 실패. 기존 값을 유지합니다: {exc}")
+
+        result["language"] = target_lang if translated_any else str(analyzed.get("language", "ko") or "ko")
+        return result
+
     def process(
         self,
         policy_text: str,
@@ -134,17 +193,40 @@ class BenePickPipeline:
             rule_result=rule_result,
             target_lang=target_lang,
         )
+        analyzed = self._translate_analysis_fields_with_fallback(
+            analyzed=analyzed,
+            policy_text=policy_text,
+            target_lang=target_lang,
+        )
+        analyzed = self.output_guard.guard_analysis(
+            analyzed,
+            target_lang=target_lang,
+            fallback_reason=str(analyzed.get("rejection_reason", "") or "판정 가능한 핵심 조건을 추가로 확인해야 합니다."),
+            fallback_guide=str(analyzed.get("guide", "") or "정책 원문에서 세부 자격 요건과 신청 조건을 다시 확인해 주세요."),
+            source_if_valid=str(analyzed.get("analysis_source", "") or "qwen"),
+            source_if_fallback=str(analyzed.get("analysis_source", "") or "guard_fallback"),
+        )
 
         summary_result = self._summarize_with_fallback(policy_text)
+        summary_result = self.output_guard.guard_summary(
+            summary_result,
+            fallback_text=policy_text,
+            expected_lang="ko",
+        )
 
         translated_summary_result = self._translate_summary_with_fallback(
             summary_text=summary_result["summary"],
             policy_text=policy_text,
             target_lang=target_lang,
         )
+        translated_summary_result = self.output_guard.guard_translation(
+            translated_summary_result,
+            original_text=summary_result["summary"],
+            target_lang=target_lang,
+        )
 
         return {
-            "language": analyzed.get("language", target_lang),
+            "language": target_lang,
             "rule_eligible": getattr(rule_result, "eligible", None),
             "rule_status": getattr(rule_result, "status", "unknown"),
             "analysis_source": analyzed["analysis_source"],
@@ -162,8 +244,12 @@ if __name__ == "__main__":
     sample_user = "저는 27살이고 소득은 65%입니다. 무주택 세대주입니다."
     sample_policy = "청년월세지원은 만 19세~34세 이하이면서 소득 60% 이하인 무주택자만 신청 가능합니다."
 
+    supported_langs = {"ko", "en", "vi", "zh", "ja"}
     selected_lang = input("테스트 언어를 입력하세요 (ko/en/vi/zh/ja) [기본값: ko]: ").strip().lower()
     if not selected_lang:
+        selected_lang = "ko"
+    if selected_lang not in supported_langs:
+        print(f"⚠️ 지원하지 않는 입력입니다: {selected_lang}. 기본값 ko를 사용합니다.")
         selected_lang = "ko"
 
     result = pipeline.process(

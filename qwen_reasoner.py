@@ -8,6 +8,8 @@ from typing import Dict, List, Optional
 import pandas as pd
 from dotenv import load_dotenv
 
+from prompt_builder import PromptBuilder
+
 
 class QwenReasoner:
     REQUIRED_COLUMNS = ["행정 용어", "영어", "베트남어", "중국어", "일본어"]
@@ -27,22 +29,6 @@ class QwenReasoner:
         "ja": "일본어",
     }
 
-    DEFAULT_ANALYSIS_PROMPT = """너는 대한민국 복지 정책 탈락 사유 설명 도우미다.
-
-[스타일]
-- 설명은 간결하고 기술적으로 작성한다.
-- 핵심 조건 위주로 짧게 쓴다.
-- 감정적 표현은 사용하지 않는다.
-
-[핵심 규칙]
-1. 정책 원문에 있는 정보만 근거로 작성한다.
-2. 정책 원문에 없는 서류, 기관, 금액, 기간, 대체 상품, 다른 정책을 추측하지 않는다.
-3. rejection_reason에는 탈락 핵심 이유 또는 추가 확인이 필요한 핵심 이유만 짧게 쓴다.
-4. guide에는 현재 정책 기준 안에서 보완 가능한 행동 또는 확인 방향만 1~2문장으로 쓴다.
-5. 다른 카드, 적금, 금융상품, 다른 복지제도를 추천하지 않는다.
-6. 반드시 한국어 JSON만 출력한다.
-7. 출력 키는 반드시 rejection_reason, guide만 사용한다."""
-
     def __init__(
         self,
         csv_path: str = "benepick_dict.csv",
@@ -60,10 +46,15 @@ class QwenReasoner:
 
         print("1. 📚 [베네픽] 행정 용어 사전 로딩 중...")
         self.glossary_df = self._load_glossary(csv_path)
-        self.analysis_prompt_base = self._load_analysis_prompt_base()
+        self.prompt_builder = self._build_prompt_builder()
 
         print(f"2. 🤖 [AI 연결] Qwen 모델({self.model_name}) 연결 중...")
         print("3. ✅ Qwen 분석/번역기 준비 완료!")
+
+    def _build_prompt_builder(self) -> PromptBuilder:
+        prompt_dir = os.path.dirname(self.prompt_path) or "prompts"
+        reject_guide_filename = os.path.basename(self.prompt_path) or "prompt_reject_guide.txt"
+        return PromptBuilder(prompt_dir=prompt_dir, reject_guide_filename=reject_guide_filename)
 
     def _load_glossary(self, csv_path: str) -> pd.DataFrame:
         try:
@@ -79,41 +70,7 @@ class QwenReasoner:
         for col in self.REQUIRED_COLUMNS:
             df[col] = df[col].astype(str).str.strip()
 
-        df = df[df["행정 용어"] != ""].reset_index(drop=True)
-        return df
-
-    def _load_analysis_prompt_base(self) -> str:
-        path = str(self.prompt_path or "").strip()
-        if not path:
-            return self.DEFAULT_ANALYSIS_PROMPT
-
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                content = f.read().strip()
-            return content or self.DEFAULT_ANALYSIS_PROMPT
-        except FileNotFoundError:
-            print(f"⚠️ 프롬프트 파일을 찾지 못해 기본 프롬프트를 사용합니다: {path}")
-            return self.DEFAULT_ANALYSIS_PROMPT
-        except Exception as exc:
-            print(f"⚠️ 프롬프트 파일 로드 실패로 기본 프롬프트를 사용합니다: {exc}")
-            return self.DEFAULT_ANALYSIS_PROMPT
-
-    def _build_analysis_context(
-        self,
-        policy_text: str,
-        user_condition: str,
-        rule_result_text: str = "",
-    ) -> str:
-        return f"""
-[사용자 조건]
-{user_condition}
-
-[정책 원문]
-{policy_text}
-
-[규칙 엔진 참고 결과]
-{rule_result_text if rule_result_text else "없음"}
-""".strip()
+        return df[df["행정 용어"] != ""].reset_index(drop=True)
 
     def _extract_relevant_glossary(self, text: str, target_lang: str) -> str:
         if target_lang == "ko":
@@ -233,36 +190,15 @@ class QwenReasoner:
             "guide": guide_match.group(1).strip(),
         }
 
-    def _build_analysis_messages(
-        self,
-        policy_text: str,
-        user_condition: str,
-        rule_result_text: str = "",
-    ) -> List[Dict[str, str]]:
-        context_block = self._build_analysis_context(policy_text, user_condition, rule_result_text)
-        prompt = f"""
-{self.analysis_prompt_base}
-
-{context_block}
-""".strip()
-
-        return [
-            {
-                "role": "system",
-                "content": "Return only valid JSON matching the schema. Use Korean only. Keys must be rejection_reason and guide.",
-            },
-            {"role": "user", "content": prompt},
-        ]
-
     def _build_analysis_text_messages(
         self,
         policy_text: str,
         user_condition: str,
         rule_result_text: str = "",
     ) -> List[Dict[str, str]]:
-        context_block = self._build_analysis_context(policy_text, user_condition, rule_result_text)
+        context_block = self.prompt_builder.build_analysis_context(policy_text, user_condition, rule_result_text)
         prompt = f"""
-{self.analysis_prompt_base}
+{self.prompt_builder.analysis_prompt_base}
 
 [출력 형식]
 REJECTION_REASON: ...
@@ -279,7 +215,7 @@ GUIDE: ...
             {"role": "user", "content": prompt},
         ]
 
-    def _build_translation_messages(
+    def _build_reason_translation_messages(
         self,
         rejection_reason_ko: str,
         guide_ko: str,
@@ -299,6 +235,7 @@ GUIDE: ...
 2. 한국어를 섞지 않는다.
 3. 아래 용어 사전이 있으면 우선 사용한다.
 4. 반드시 JSON만 출력한다.
+5. 출력 키는 반드시 rejection_reason, guide만 사용한다.
 
 [용어 사전]
 {glossary_str if glossary_str else "해당 문서에 매핑되는 용어 없음"}
@@ -318,13 +255,9 @@ GUIDE: ...
             {"role": "user", "content": prompt},
         ]
 
-    def _analyze_in_korean(
-        self,
-        policy_text: str,
-        user_condition: str,
-        rule_result_text: str = "",
-    ) -> Dict[str, str]:
-        schema = {
+    @staticmethod
+    def _get_reason_translation_schema() -> Dict:
+        return {
             "type": "object",
             "properties": {
                 "rejection_reason": {"type": "string"},
@@ -334,9 +267,16 @@ GUIDE: ...
             "additionalProperties": False,
         }
 
+    def _analyze_in_korean(
+        self,
+        policy_text: str,
+        user_condition: str,
+        rule_result_text: str = "",
+    ) -> Dict[str, str]:
+        schema = self.prompt_builder.get_analysis_schema()
         last_error: Optional[Exception] = None
 
-        messages = self._build_analysis_messages(policy_text, user_condition, rule_result_text)
+        messages = self.prompt_builder.build_analysis_messages(policy_text, user_condition, rule_result_text)
         for _ in range(2):
             try:
                 data = self._call_model_json(messages, schema)
@@ -384,19 +324,9 @@ GUIDE: ...
                 "guide": guide_ko,
             }
 
-        schema = {
-            "type": "object",
-            "properties": {
-                "language": {"type": "string"},
-                "rejection_reason": {"type": "string"},
-                "guide": {"type": "string"},
-            },
-            "required": ["language", "rejection_reason", "guide"],
-            "additionalProperties": False,
-        }
-
+        schema = self._get_reason_translation_schema()
         last_error: Optional[Exception] = None
-        messages = self._build_translation_messages(
+        messages = self._build_reason_translation_messages(
             rejection_reason_ko=rejection_reason_ko,
             guide_ko=guide_ko,
             policy_text=policy_text,
@@ -433,6 +363,7 @@ GUIDE: ...
     ) -> Dict[str, str]:
         policy_text = str(policy_text or "").strip()
         user_condition = str(user_condition or "").strip()
+        rule_result_text = str(rule_result_text or "").strip()
         target_lang = str(target_lang or "ko").strip().lower()
 
         if not policy_text:
@@ -459,3 +390,21 @@ GUIDE: ...
             "guide": translated["guide"],
             "analysis_source": "qwen",
         }
+
+
+if __name__ == "__main__":
+    reasoner = QwenReasoner()
+
+    sample_policy = (
+        "청년월세지원은 만 19세~34세 이하이면서 소득 60% 이하인 무주택자만 신청 가능합니다."
+    )
+    sample_user = "저는 27살이고 소득은 65%입니다. 무주택 세대주입니다."
+    sample_rule_result = "소득 기준 60% 이하 조건 미충족 가능성 있음"
+
+    result = reasoner.analyze_rejection_and_guide(
+        policy_text=sample_policy,
+        user_condition=sample_user,
+        rule_result_text=sample_rule_result,
+        target_lang="ko",
+    )
+    print(json.dumps(result, ensure_ascii=False, indent=4))
