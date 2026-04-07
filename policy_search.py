@@ -1,21 +1,12 @@
-"""
-06 유사 정책 검색
-=================
-사용자 정보 → 검색 쿼리 생성 → FAISS 유사도 검색 → Top-K 정책 반환
-
-수정 사항:
-  - [BUG FIX] SCORE_MIN 0.3 → 0.45 상향 (너무 낮으면 무관한 정책 다수 반환)
-  - 검색 쿼리 품질 개선: 조건 없는 필드는 제외, 유의미한 키워드 조합만 사용
-"""
-
 from __future__ import annotations
 
-import json
 import logging
+import re as _re
 from pathlib import Path
 
-import numpy as np
-import faiss
+import chromadb
+import pandas as pd
+from rank_bm25 import BM25Okapi
 from sentence_transformers import SentenceTransformer
 from sqlalchemy import create_engine, text
 
@@ -23,15 +14,28 @@ from sqlalchemy import create_engine, text
 # 설정
 # ──────────────────────────────────────────────
 MODEL_NAME = "BAAI/bge-m3"
-INDEX_DIR  = Path("faiss_index")
-INDEX_PATH = INDEX_DIR / "gov_benefits.index"
-META_PATH  = INDEX_DIR / "metadata.json"
+CHROMA_PATH = Path("chroma_db")
+COLLECTION_NAME = "benepick_policies"
+DATA_DIR = Path("data/processed")
+WELFARE_CHUNKS_PATH = DATA_DIR / "chunks.csv"
+GOV24_CHUNKS_PATH = DATA_DIR / "gov24" / "chunks.csv"
 
-DB_URL     = "sqlite:///gov_benefits.db"
+DB_URL = "sqlite:///gov_benefits.db"
 TABLE_NAME = "gov_benefits"
 
 TOP_K_DEFAULT = 10
-SCORE_MIN     = 0.45  # [수정] 0.3 → 0.45: 너무 낮으면 무관한 정책 다수 포함
+ALPHA_DEFAULT = 0.6
+
+METRO_KEYWORDS = [
+    "서울", "부산", "대구", "인천", "광주", "대전", "울산", "세종",
+    "경기", "강원", "충북", "충남", "전북", "전남", "경북", "경남", "제주",
+]
+
+_JOSA = sorted([
+    "으로부터", "에게서", "에서부터", "로부터",
+    "에서", "에게", "한테", "으로", "까지", "부터", "처럼", "만큼", "보다",
+    "에", "의", "을", "를", "이", "가", "은", "는", "과", "와", "도", "만", "로", "야", "아",
+], key=len, reverse=True)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -41,14 +45,28 @@ logging.basicConfig(
 log = logging.getLogger("benefic.policy_search")
 
 
+def _extract_field_from_text(text: str, field: str) -> str:
+    m = _re.search(rf"{field}:\s*(.+?)(?:\n|$)", str(text or ""))
+    return m.group(1).strip() if m else ""
+
+
+def tokenize(text: str) -> list[str]:
+    tokens: list[str] = []
+    for word in str(text or "").split():
+        if len(word) < 2:
+            continue
+        tokens.append(word)
+        for josa in _JOSA:
+            if word.endswith(josa) and len(word) - len(josa) >= 2:
+                tokens.append(word[:-len(josa)])
+                break
+    return tokens
+
+
 # ──────────────────────────────────────────────
 # 1. 사용자 정보 → 검색 쿼리 변환
 # ──────────────────────────────────────────────
 def build_query(user: dict) -> str:
-    """
-    사용자 정보 dict → 자연어 검색 쿼리 생성
-    정책 필드 형식([지원내용]×2, [대상]×3, [선정기준]×2)에 맞춰 가중치 적용
-    """
     base_parts = []
 
     age = user.get("나이")
@@ -83,8 +101,6 @@ def build_query(user: dict) -> str:
 
     base = " ".join(base_parts)
 
-    # 정책 필드 가중치에 맞춰 쿼리 구성
-    # 서비스명×1, 목적요약×1, 지원내용×2, 지원대상×3, 선정기준×2
     parts = []
     parts.append(f"[서비스] {base}")
     parts.append(f"[목적] {base}")
@@ -97,15 +113,12 @@ def build_query(user: dict) -> str:
     return query
 
 
-# ──────────────────────────────────────────────
-# 2. FAISS 검색기
-# ──────────────────────────────────────────────
-class PolicySearcher:
-    """FAISS 기반 정책 유사도 검색기 (싱글턴 — 모델을 한 번만 로드)"""
+class HybridSearcher:
+    """Chroma + BM25 하이브리드 검색기"""
 
-    _instance: "PolicySearcher | None" = None
+    _instance: "HybridSearcher | None" = None
 
-    def __new__(cls) -> "PolicySearcher":
+    def __new__(cls) -> "HybridSearcher":
         if cls._instance is None:
             cls._instance = super().__new__(cls)
             cls._instance._loaded = False
@@ -115,58 +128,123 @@ class PolicySearcher:
         if self._loaded:
             return
 
-        if not INDEX_PATH.exists() or not META_PATH.exists():
+        if not CHROMA_PATH.exists():
             raise FileNotFoundError(
-                "FAISS 인덱스가 없습니다.\n"
-                "먼저 실행하세요: python gov_benefits_embedding.py --once"
+                "chroma_db 폴더가 없습니다.\n"
+                "종민님이 공유한 chroma_db 폴더를 프로젝트 루트에 두세요."
+            )
+        if not WELFARE_CHUNKS_PATH.exists():
+            raise FileNotFoundError(
+                "data/processed/chunks.csv 파일이 없습니다.\n"
+                "종민님이 공유한 data 폴더를 프로젝트 루트에 두세요."
             )
 
-        import torch
-        device = "cuda" if torch.cuda.is_available() else "cpu"
+        client = chromadb.PersistentClient(path=str(CHROMA_PATH))
+        self.collection = client.get_collection(COLLECTION_NAME)
 
-        log.info("모델 로드 중: %s (%s)", MODEL_NAME, device)
-        self.model = SentenceTransformer(MODEL_NAME, device=device)
-        self.index = faiss.read_index(str(INDEX_PATH))
-        self.meta  = json.loads(META_PATH.read_text(encoding="utf-8"))
+        chunk_frames = [pd.read_csv(WELFARE_CHUNKS_PATH)]
+        if GOV24_CHUNKS_PATH.exists():
+            chunk_frames.append(pd.read_csv(GOV24_CHUNKS_PATH))
+        self.df_chunks = pd.concat(chunk_frames, ignore_index=True)
+        self.df_chunks["chunk_id"] = self.df_chunks["chunk_id"].astype(str)
+        self.df_chunks["policy_id"] = self.df_chunks["policy_id"].astype(str)
+        self.df_chunks = self.df_chunks.set_index("chunk_id", drop=False)
+
+        log.info("전체 청크 로드: %d개", len(self.df_chunks))
+        self.model = SentenceTransformer(MODEL_NAME)
+        self.chunk_ids = self.df_chunks["chunk_id"].tolist()
+        self.bm25 = BM25Okapi([tokenize(text) for text in self.df_chunks["text"].tolist()])
+
         self._loaded = True
-        log.info("검색기 준비 완료 — 총 %d 개 정책", self.index.ntotal)
+        log.info("하이브리드 검색기 준비 완료")
+
+    def _normalize_chunk_id(self, chunk_id: str) -> str | None:
+        cid = str(chunk_id)
+        if cid in self.df_chunks.index:
+            return cid
+        suffixed = f"{cid}_01"
+        if suffixed in self.df_chunks.index:
+            return suffixed
+        return None
+
+    def vector_search(self, query: str, top_k: int = 10) -> dict[str, float]:
+        self._load()
+        query_embedding = self.model.encode([query], normalize_embeddings=True).tolist()
+        results = self.collection.query(query_embeddings=query_embedding, n_results=top_k)
+
+        scores: dict[str, float] = {}
+        for raw_id, dist in zip(results["ids"][0], results["distances"][0]):
+            normalized_id = self._normalize_chunk_id(raw_id)
+            if normalized_id is None:
+                continue
+            scores[normalized_id] = 1 - float(dist)
+        return scores
+
+    def bm25_search(self, query: str) -> dict[str, float]:
+        self._load()
+        scores = self.bm25.get_scores(tokenize(query))
+        max_score = max(scores) + 1e-9
+        normalized = scores / max_score
+        return {chunk_id: float(normalized[i]) for i, chunk_id in enumerate(self.chunk_ids)}
 
     def search(
         self,
         query: str,
         top_k: int = TOP_K_DEFAULT,
-        score_min: float = SCORE_MIN,
+        alpha: float = ALPHA_DEFAULT,
         filters: dict[str, str] | None = None,
     ) -> list[dict]:
         self._load()
 
-        q_vec = self.model.encode(
-            [query],
-            normalize_embeddings=True,
-            convert_to_numpy=True,
-        ).astype(np.float32)
+        vector_scores = self.vector_search(query, top_k=top_k * 3)
+        bm25_scores = self.bm25_search(query)
 
-        fetch_k = min(top_k * 10 if filters else top_k * 3, self.index.ntotal)
-        scores, indices = self.index.search(q_vec, fetch_k)
+        all_ids = set(vector_scores.keys()) | set(bm25_scores.keys())
+        final_scores = {
+            cid: alpha * vector_scores.get(cid, 0.0) + (1 - alpha) * bm25_scores.get(cid, 0.0)
+            for cid in all_ids
+        }
 
-        results = []
-        seen_names = set()  # 서비스명 중복 제거
-        for score, idx in zip(scores[0], indices[0]):
-            if idx < 0 or float(score) < score_min:
-                continue
+        top_ids = sorted(final_scores, key=final_scores.get, reverse=True)
 
-            item = self.meta[idx].copy()
-            item["score"] = round(float(score), 4)
+        results: list[dict] = []
+        seen_names: set[str] = set()
+        for chunk_id in top_ids:
+            row = self.df_chunks.loc[chunk_id]
+            text_val = str(row["text"])
+
+            item = {
+                "chunk_id": chunk_id,
+                "policy_id": str(row["policy_id"]),
+                "서비스명": row["policy_name"],
+                "policy_name": row["policy_name"],
+                "서비스분야": row["category"],
+                "category": row["category"],
+                "소관기관명": _extract_field_from_text(text_val, "소관기관") or _extract_field_from_text(text_val, "소관부처") or row["category"],
+                "소관조직명": _extract_field_from_text(text_val, "소관조직"),
+                "지원유형": _extract_field_from_text(text_val, "지원유형"),
+                "지원대상": _extract_field_from_text(text_val, "지원대상"),
+                "지원내용": _extract_field_from_text(text_val, "지원내용") or _extract_field_from_text(text_val, "서비스요약"),
+                "선정기준": _extract_field_from_text(text_val, "선정기준"),
+                "신청방법": _extract_field_from_text(text_val, "신청방법"),
+                "신청기한": _extract_field_from_text(text_val, "신청기한"),
+                "전화문의": _extract_field_from_text(text_val, "전화문의") or _extract_field_from_text(text_val, "대표문의"),
+                "상세조회url": row["source_url"],
+                "source_url": row["source_url"],
+                "region": row["region"],
+                "score": round(final_scores[chunk_id], 4),
+                "vector_score": round(vector_scores.get(chunk_id, 0.0), 4),
+                "bm25_score": round(bm25_scores.get(chunk_id, 0.0), 4),
+                "evidence_text": text_val,
+            }
 
             if filters and not self._match(item, filters):
                 continue
 
-            # 서비스명 기준 중복 제거
-            name = item.get("서비스명") or str(idx)
+            name = str(item.get("서비스명") or chunk_id)
             if name in seen_names:
                 continue
             seen_names.add(name)
-
             results.append(item)
 
             if len(results) >= top_k:
@@ -177,7 +255,7 @@ class PolicySearcher:
     @staticmethod
     def _match(item: dict, filters: dict[str, str]) -> bool:
         for col, val in filters.items():
-            if val.lower() not in (item.get(col) or "").lower():
+            if str(val).lower() not in str(item.get(col, "")).lower():
                 return False
         return True
 
@@ -192,24 +270,11 @@ def search_by_keyword(
     limit: int = 20,
     offset: int = 0,
 ) -> list[dict]:
-    """
-    키워드 / 분야·유형 필터로 DB 직접 조회 (FAISS 불필요)
-
-    Parameters
-    ----------
-    keyword      : 서비스명·지원내용에서 LIKE 검색
-    category     : 서비스분야 정확 매칭 (예: "주거", "고용")
-    support_type : 지원유형 정확 매칭 (예: "현금", "서비스")
-    limit        : 최대 반환 건수
-    offset       : 페이지네이션 오프셋
-    """
     engine = create_engine(DB_URL)
     conditions, params = ["1=1"], {}
 
     if keyword:
-        conditions.append(
-            "(서비스명 LIKE :kw OR 지원내용 LIKE :kw OR 서비스목적요약 LIKE :kw)"
-        )
+        conditions.append("(서비스명 LIKE :kw OR 지원내용 LIKE :kw OR 서비스목적요약 LIKE :kw)")
         params["kw"] = f"%{keyword}%"
     if category:
         conditions.append("서비스분야 LIKE :cat")
@@ -236,21 +301,10 @@ def search_by_keyword(
         return []
 
 
-def search_by_natural_language(
-    query_text: str,
-    top_k: int = TOP_K_DEFAULT,
-) -> list[dict]:
-    """
-    자연어 문장 → FAISS 벡터 검색 (사용자 조건 dict 없이 직접 쿼리)
-
-    Parameters
-    ----------
-    query_text : 자연어 검색 문장 (예: "청년 월세 지원받고 싶어요")
-    top_k      : 반환 건수
-    """
+def search_by_natural_language(query_text: str, top_k: int = TOP_K_DEFAULT) -> list[dict]:
     if not query_text.strip():
         return []
-    results = PolicySearcher().search(query_text.strip(), top_k=top_k)
+    results = HybridSearcher().search(query_text.strip(), top_k=top_k)
     log.info("자연어 검색: '%s' → %d 건", query_text[:30], len(results))
     return results
 
@@ -261,33 +315,16 @@ def browse_all(
     category: str = "",
     sort_by: str = "서비스명",
 ) -> dict:
-    """
-    조건 없이 전체 정책 목록 페이지네이션 브라우징
-
-    Parameters
-    ----------
-    page     : 페이지 번호 (1부터)
-    per_page : 페이지당 건수
-    category : 분야 필터 (선택)
-    sort_by  : 정렬 기준 컬럼명
-
-    Returns
-    -------
-    {total, page, per_page, total_pages, results}
-    """
     engine = create_engine(DB_URL)
     offset = (page - 1) * per_page
-    where  = "WHERE 서비스분야 LIKE :cat" if category else ""
+    where = "WHERE 서비스분야 LIKE :cat" if category else ""
     params: dict = {}
     if category:
         params["cat"] = f"%{category}%"
 
     try:
         with engine.connect() as conn:
-            total_row = conn.execute(
-                text(f"SELECT COUNT(*) FROM {TABLE_NAME} {where}"),
-                params,
-            ).fetchone()
+            total_row = conn.execute(text(f"SELECT COUNT(*) FROM {TABLE_NAME} {where}"), params).fetchone()
             total = total_row[0] if total_row else 0
 
             rows = conn.execute(
@@ -299,14 +336,14 @@ def browse_all(
             ).fetchall()
 
         results = [dict(r._mapping) for r in rows]
-        total_pages = -(-total // per_page)  # ceiling division
+        total_pages = -(-total // per_page)
         log.info("전체 브라우징: page=%d/%d, %d 건", page, total_pages, len(results))
         return {
-            "total":       total,
-            "page":        page,
-            "per_page":    per_page,
+            "total": total,
+            "page": page,
+            "per_page": per_page,
             "total_pages": total_pages,
-            "results":     results,
+            "results": results,
         }
     except Exception as e:
         log.error("브라우징 오류: %s", e)
@@ -314,7 +351,6 @@ def browse_all(
 
 
 def get_categories() -> list[str]:
-    """DB에서 서비스분야 고유값 목록 반환 (필터 UI용)"""
     engine = create_engine(DB_URL)
     try:
         with engine.connect() as conn:
@@ -333,16 +369,6 @@ def search_policies(
     top_k: int = TOP_K_DEFAULT,
     filters: dict[str, str] | None = None,
 ) -> list[dict]:
-    """
-    사용자 정보 dict 또는 자연어 쿼리로 유사 정책 리스트 반환
-
-    Parameters
-    ----------
-    user       : get_user_input() 반환값 (조건 기반 검색)
-    query_text : 자연어 직접 입력 (user 없을 때 사용)
-    top_k      : 반환 건수 (기본 10)
-    filters    : 추가 필터 ex) {"지원유형": "현금지원"}
-    """
     if user:
         query = build_query(user)
     elif query_text:
@@ -350,22 +376,16 @@ def search_policies(
     else:
         return []
 
-    results = PolicySearcher().search(query, top_k=top_k, filters=filters)
+    results = HybridSearcher().search(query, top_k=top_k, filters=filters)
 
-    # 서비스명에 '마감' 포함된 항목 제외
-    results = [r for r in results if "마감" not in (r.get("서비스명") or "")]
+    results = [r for r in results if "마감" not in str(r.get("서비스명") or "")]
 
-    # 지역 필터: 전국 정책 + 본인 거주지역 정책만 포함 (user 있을 때만)
     region = (user or {}).get("거주지역", "")
     if region and region != "전국":
-        METRO_KEYWORDS = [
-            "서울", "부산", "대구", "인천", "광주", "대전", "울산", "세종",
-            "경기", "강원", "충북", "충남", "전북", "전남", "경북", "경남", "제주"
-        ]
         user_region_kw = next((kw for kw in METRO_KEYWORDS if kw in region), None)
 
         def is_allowed(r: dict) -> bool:
-            target = (r.get("소관기관명") or "") + (r.get("서비스명") or "")
+            target = str(r.get("소관기관명") or "") + str(r.get("서비스명") or "")
             for kw in METRO_KEYWORDS:
                 if kw == user_region_kw:
                     continue
@@ -377,53 +397,3 @@ def search_policies(
 
     log.info("검색 결과: %d 건 (마감·지역 필터 후)", len(results))
     return results
-
-
-# ──────────────────────────────────────────────
-# 4. 결과 출력 유틸
-# ──────────────────────────────────────────────
-def print_results(results: list[dict]) -> None:
-    if not results:
-        print("\n검색 결과가 없습니다.")
-        return
-
-    print(f"\n{'─' * 60}")
-    print(f"  검색 결과 {len(results)}건")
-    print(f"{'─' * 60}")
-
-    for i, r in enumerate(results, 1):
-        print(f"\n[{i}] {r.get('서비스명', '-')}  (유사도: {r['score']:.4f})")
-        print(f"    분야  : {r.get('서비스분야', '-')}")
-        print(f"    유형  : {r.get('지원유형', '-')}")
-        print(f"    기관  : {r.get('소관기관명', '-')}")
-        print(f"    기한  : {r.get('신청기한', '-')}")
-        if r.get('지원대상'):
-            print(f"    지원대상: {r['지원대상']}")
-        print(f"    신청  : {r.get('신청방법', '-')}")
-        print(f"    접수  : {r.get('접수기관', '-')}")
-        print(f"    문의  : {r.get('전화문의', '-')}")
-        if r.get("상세조회url"):
-            print(f"    URL   : {r['상세조회url']}")
-
-    print(f"\n{'─' * 60}\n")
-
-
-# ──────────────────────────────────────────────
-# 5. 단독 실행
-# ──────────────────────────────────────────────
-if __name__ == "__main__":
-    import sys
-    from user_input import get_user_input
-
-    # 키 목록 확인 모드: python policy_search.py --keys
-    if "--keys" in sys.argv:
-        meta = json.loads(META_PATH.read_text(encoding="utf-8"))
-        if meta:
-            print("metadata.json 첫 번째 항목 키 목록:")
-            for k, v in meta[0].items():
-                print(f"  {k!r}: {v!r}")
-        sys.exit(0)
-
-    user    = get_user_input()
-    results = search_policies(user, top_k=10)
-    print_results(results)

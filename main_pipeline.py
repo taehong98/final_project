@@ -242,7 +242,6 @@ if __name__ == "__main__":
     pipeline = BenePickPipeline(csv_path="benepick_dict.csv")
 
     sample_user = "저는 27살이고 소득은 65%입니다. 무주택 세대주입니다."
-    sample_policy = "청년월세지원은 만 19세~34세 이하이면서 소득 60% 이하인 무주택자만 신청 가능합니다."
 
     supported_langs = {"ko", "en", "vi", "zh", "ja"}
     selected_lang = input("테스트 언어를 입력하세요 (ko/en/vi/zh/ja) [기본값: ko]: ").strip().lower()
@@ -251,6 +250,13 @@ if __name__ == "__main__":
     if selected_lang not in supported_langs:
         print(f"⚠️ 지원하지 않는 입력입니다: {selected_lang}. 기본값 ko를 사용합니다.")
         selected_lang = "ko"
+
+    print("정책 원문을 붙여넣으세요. 붙여넣은 뒤 엔터를 누르세요.")
+    sample_policy = input("> ").strip()
+
+    if not sample_policy:
+        print("⚠️ 원문이 비어 있어서 기본 샘플 정책으로 테스트합니다.")
+        sample_policy = "청년월세지원은 만 19세~34세 이하이면서 소득 60% 이하인 무주택자만 신청 가능합니다."
 
     result = pipeline.process(
         policy_text=sample_policy,

@@ -355,6 +355,7 @@ async def post_analyze(req: AnalyzeRequest):
         "education_level":   req.education_level or "",
     }
 
+    # 대시보드 수치는 GPT 결과보다 실제 계산값을 우선 사용해 일관성 보장
     dashboard_data = {
         "user_profile": {
             "user_name":        req.user_name,
@@ -369,25 +370,22 @@ async def post_analyze(req: AnalyzeRequest):
         },
         "recommendation_cards": all_cards,
         "dashboard_stats": {
-            "matched_policy_count":         _gpt_dash_stats.get("matched_policy_count", len(all_cards)),
-            "average_probability_percent":  _gpt_dash_stats.get("average_probability_percent", avg_pct),
+            "matched_policy_count":         len(passed),
+            "average_probability_percent":  avg_pct,
             "expected_total_benefit_label": _gpt_dash_stats.get("expected_total_benefit_label", "-"),
-            "ready_apply_count":            _gpt_dash_stats.get("ready_apply_count", ready_count),
+            "ready_apply_count":            ready_count,
         },
         "stats": {
-            "해당정책수":    _gpt_stats_block.get("해당정책수", _gpt_stats.get("해당정책수", len(all_cards))),
-            "평균확률":      _gpt_stats_block.get("평균확률", _gpt_stats.get("평균확률", avg_pct)),
+            "해당정책수":    len(passed),
+            "평균확률":      avg_pct,
             "예상수혜액":    _gpt_stats_block.get("예상수혜액", _gpt_stats.get("예상수혜액", "-")),
-            "즉시신청가능":  _gpt_stats_block.get("즉시신청가능", _gpt_stats.get("즉시신청가능", ready_count)),
+            "즉시신청가능":  ready_count,
         },
         "portfolio_preview": {
             "total_expected_benefit_label": _gpt_preview.get("total_expected_benefit_label", "-"),
             "items": portfolio_preview_items,
         },
-        "summary": _gpt_dashboard.get(
-            "summary",
-            f"총 {len(all_cards)}개 정책 분석 완료. 수급 가능(60% 이상) {len(passed)}건."
-        ),
+        "summary": f"총 {len(all_cards)}개 정책 분석 완료. 수급 가능(60% 이상) {len(passed)}건.",
     }
 
     return {
