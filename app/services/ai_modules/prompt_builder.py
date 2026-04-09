@@ -6,53 +6,57 @@ from typing import Dict, Optional
 
 class PromptBuilder:
     LANG_MAP = {
-        "ko": "한국어",
+        "ko": "Korean",
         "en": "English",
-        "vi": "Tiếng Việt",
-        "zh": "中文",
-        "ja": "日本語",
+        "vi": "Vietnamese",
+        "zh": "Chinese",
+        "ja": "Japanese",
     }
 
-    DEFAULT_ANALYSIS_PROMPT = """너는 대한민국 복지 정책 탈락 사유 설명 도우미다.
+    DEFAULT_ANALYSIS_PROMPT = """
+You are an assistant that explains welfare-policy eligibility issues.
 
-[목표]
-- 사용자 조건과 정책 원문, 규칙 엔진 결과를 함께 보고 탈락 가능 사유와 확인/보완 가이드를 정리한다.
+Goal:
+- Read the user condition, the policy text, and the rule-engine notes.
+- Return short Korean bullet-style reasons and guides.
 
-[핵심 규칙]
-1. 규칙 엔진 결과를 가장 우선 근거로 삼는다.
-2. 정책 원문에 없는 기관, 금액, 기간, 서류, 다른 제도는 추측하지 않는다.
-3. rejection_reasons에는 핵심 이유를 1~3개까지 짧게 쓴다.
-4. guides에는 지금 확인하거나 보완할 행동을 1~3개까지 짧게 쓴다.
-5. 반드시 한국어 JSON만 출력한다.
-6. 출력 키는 반드시 rejection_reasons, guides만 사용한다.
-"""
+Rules:
+1. Use the rule-engine result as the first source of truth.
+2. Do not invent amounts, dates, agencies, or conditions that are not in the source.
+3. Return 1 to 3 rejection reasons.
+4. Return 1 to 3 practical guides.
+5. Output JSON only.
+""".strip()
 
-    DEFAULT_SUMMARY_PROMPT = """너는 대한민국 복지 정책 요약 도우미다.
+    DEFAULT_SUMMARY_PROMPT = """
+You are an assistant that extracts the core facts of a Korean welfare policy.
 
-[목표]
-- 복지 정책 원문을 구조화해서 일반 사용자에게 핵심만 전달한다.
+Goal:
+- Read the policy text.
+- Ignore contact spam, long phone lists, and duplicate agency listings.
+- Return only the core facts needed for a user-facing summary.
 
-[핵심 규칙]
-1. 정책 원문에 있는 정보만 사용한다.
-2. 정책 원문에 없는 금액, 기간, 기관, 자격, 서류를 추측하지 않는다.
-3. 문장을 길게 복사하지 말고 항목별 핵심만 짧게 정리한다.
-4. 반드시 한국어 JSON만 출력한다.
-5. 출력 키는 반드시 policy_name, target, benefit, conditions, how_to_apply만 사용한다.
-"""
+Rules:
+1. Do not invent missing facts.
+2. Keep numbers, age ranges, amounts, and dates exact.
+3. Each field should be short and factual.
+4. Output JSON only.
+""".strip()
 
-    DEFAULT_TRANSLATION_PROMPT = """너는 대한민국 복지 정책 번역 도우미다.
+    DEFAULT_TRANSLATION_PROMPT = """
+You are an assistant that translates Korean welfare-policy text.
 
-[목표]
-- 한국어 복지 정책 문장을 지정된 언어로 자연스럽고 정확하게 번역한다.
+Goal:
+- Translate the source text into the target language accurately and naturally.
 
-[핵심 규칙]
-1. 원문의 의미를 추가하거나 삭제하지 않는다.
-2. 한국어를 섞지 않는다.
-3. 용어 사전이 있으면 우선 반영한다.
-4. 문체는 안내문/행정문에 맞게 간결하게 유지한다.
-5. 반드시 JSON만 출력한다.
-6. 출력 키는 반드시 translated_text만 사용한다.
-"""
+Rules:
+1. Do not add or remove facts.
+2. Keep placeholders such as [[PRESERVE_1]] exactly unchanged.
+3. Keep numbers, percentages, money amounts, dates, URLs, and policy terms exact.
+4. Follow the glossary when it is provided.
+5. Output JSON only.
+6. The JSON object must contain exactly one key named translated_text.
+""".strip()
 
     def __init__(
         self,
@@ -83,109 +87,108 @@ class PromptBuilder:
             return default
 
     def get_lang_name(self, lang_code: str) -> str:
-        lang_code = str(lang_code or "ko").strip().lower()
-        if lang_code not in self.LANG_MAP:
-            raise ValueError(f"지원하지 않는 언어입니다: {lang_code}")
-        return self.LANG_MAP[lang_code]
+        normalized = str(lang_code or "ko").strip().lower()
+        if normalized not in self.LANG_MAP:
+            raise ValueError(f"Unsupported language: {lang_code}")
+        return self.LANG_MAP[normalized]
 
     def _get_translation_examples(self, target_lang: str) -> str:
         examples = {
             "en": (
-                "- 무주택 청년 -> young adults without home ownership\n"
-                "- 기준 중위소득 60% 이하 -> households with income at or below 60% of the median income standard\n"
-                "- 신청 방법 -> application method"
+                "- \uAE30\uC900 \uC911\uC704\uC18C\uB4DD -> standard median income\n"
+                "- \uBB34\uC8FC\uD0DD \uCCAD\uB144 -> non-homeowning young adults\n"
+                "- \uC804\uC785\uC2E0\uACE0 -> move-in registration"
             ),
             "zh": (
-                "- 무주택 청년 -> 无住房青年\n"
-                "- 기준 중위소득 60% 이하 -> 收入不高于基准中位收入60%的家庭\n"
-                "- 신청 방법 -> 申请方式"
+                "- \uAE30\uC900 \uC911\uC704\uC18C\uB4DD -> \u6807\u51C6\u4E2D\u4F4D\u6570\u6536\u5165\n"
+                "- \uBB34\uC8FC\uD0DD \uCCAD\uB144 -> \u65E0\u623F\u9752\u5E74\n"
+                "- \uC804\uC785\uC2E0\uACE0 -> \u8FC1\u5165\u7533\u62A5"
             ),
             "ja": (
-                "- 무주택 청년 -> 住宅を所有していない青年\n"
-                "- 기준 중위소득 60% 이하 -> 基準中位所得の60%以下の世帯\n"
-                "- 신청 방법 -> 申請方法"
+                "- \uAE30\uC900 \uC911\uC704\uC18C\uB4DD -> \u57FA\u6E96\u4E2D\u4F4D\u6240\u5F97\n"
+                "- \uBB34\uC8FC\uD0DD \uCCAD\uB144 -> \u7121\u4F4F\u5B85\u306E\u9752\u5E74\n"
+                "- \uC804\uC785\uC2E0\uACE0 -> \u8EE2\u5165\u5C4A"
             ),
             "vi": (
-                "- 무주택 청년 -> thanh niên chưa sở hữu nhà ở\n"
-                "- 기준 중위소득 60% 이하 -> hộ gia đình có thu nhập không vượt quá 60% mức thu nhập trung vị chuẩn\n"
-                "- 신청 방법 -> cách thức nộp hồ sơ"
+                "- \uAE30\uC900 \uC911\uC704\uC18C\uB4DD -> thu nhap trung vi tieu chuan\n"
+                "- \uBB34\uC8FC\uD0DD \uCCAD\uB144 -> thanh nien khong so huu nha\n"
+                "- \uC804\uC785\uC2E0\uACE0 -> dang ky chuyen den"
             ),
         }
         return examples.get(target_lang, "")
 
     def build_analysis_context(self, policy_text: str, user_condition: str, rule_result_text: str = "") -> str:
-        return f"""
-[사용자 조건]
-{str(user_condition or '').strip()}
+        return (
+            "[User condition]\n"
+            f"{str(user_condition or '').strip()}\n\n"
+            "[Policy text]\n"
+            f"{str(policy_text or '').strip()}\n\n"
+            "[Rule engine notes]\n"
+            f"{str(rule_result_text or '').strip() or 'None'}"
+        )
 
-[정책 원문]
-{str(policy_text or '').strip()}
-
-[규칙 엔진 참고 결과]
-{str(rule_result_text or '').strip() or '없음'}
-""".strip()
-
-    def build_analysis_messages(self, policy_text: str, user_condition: str, rule_result_text: str = "") -> list[Dict[str, str]]:
+    def build_analysis_messages(
+        self,
+        policy_text: str,
+        user_condition: str,
+        rule_result_text: str = "",
+    ) -> list[Dict[str, str]]:
         context = self.build_analysis_context(policy_text, user_condition, rule_result_text)
-        user_prompt = f"{self.analysis_prompt_base}\n\n{context}"
+        return [
+            {
+                "role": "system",
+                "content": "Return only valid JSON matching the schema. Use Korean only.",
+            },
+            {
+                "role": "user",
+                "content": f"{self.analysis_prompt_base}\n\n{context}",
+            },
+        ]
+
+    def build_summary_messages(self, policy_text: str) -> list[Dict[str, str]]:
+        user_prompt = (
+            f"{self.summary_prompt_base}\n\n"
+            "[Policy text]\n"
+            f"{str(policy_text or '').strip()}"
+        )
         return [
             {
                 "role": "system",
                 "content": (
                     "Return only valid JSON matching the schema. "
-                    "Use Korean only. Keys must be rejection_reasons and guides."
+                    "Use Korean only. Unknown fields must be empty strings."
                 ),
             },
             {"role": "user", "content": user_prompt},
         ]
 
-    def build_summary_user_prompt(self, policy_text: str) -> str:
-        return f"""
-{self.summary_prompt_base}
-
-[정책 원문]
-{str(policy_text or '').strip()}
-""".strip()
-
-    def build_summary_messages(self, policy_text: str) -> list[Dict[str, str]]:
+    def build_translation_messages(
+        self,
+        text: str,
+        target_lang: str,
+        glossary_text: Optional[str] = None,
+        policy_context: Optional[str] = None,
+    ) -> list[Dict[str, str]]:
+        lang_name = self.get_lang_name(target_lang)
+        glossary = str(glossary_text or "").strip() or "No glossary matches."
+        context = str(policy_context or "").strip() or "No extra policy context."
+        examples = self._get_translation_examples(target_lang) or "No examples."
+        user_prompt = (
+            f"{self.translation_prompt_base}\n\n"
+            f"[Target language]\n{lang_name}\n\n"
+            f"[Glossary]\n{glossary}\n\n"
+            f"[Reference context]\n{context}\n\n"
+            f"[Examples]\n{examples}\n\n"
+            f"[Source text]\n{str(text or '').strip()}"
+        )
         return [
             {
                 "role": "system",
                 "content": (
-                    "Return only valid JSON matching the schema. "
-                    "Use Korean only. Keys must be policy_name, target, benefit, conditions, how_to_apply."
+                    f"Return only valid JSON matching the schema. "
+                    f"Use only {lang_name}. Keep placeholders unchanged. "
+                    f"The only allowed JSON key is translated_text."
                 ),
-            },
-            {"role": "user", "content": self.build_summary_user_prompt(policy_text)},
-        ]
-
-    def build_translation_user_prompt(self, text: str, target_lang: str, glossary_text: Optional[str] = None) -> str:
-        lang_name = self.get_lang_name(target_lang)
-        glossary_text = str(glossary_text or "").strip() or "해당 문서에 매핑되는 용어 없음"
-        examples = self._get_translation_examples(target_lang)
-        return f"""
-{self.translation_prompt_base}
-
-[목표 언어]
-{lang_name}
-
-[용어 사전]
-{glossary_text}
-
-[번역 예시]
-{examples or '없음'}
-
-[원문]
-{str(text or '').strip()}
-""".strip()
-
-    def build_translation_messages(self, text: str, target_lang: str, glossary_text: Optional[str] = None) -> list[Dict[str, str]]:
-        lang_name = self.get_lang_name(target_lang)
-        user_prompt = self.build_translation_user_prompt(text=text, target_lang=target_lang, glossary_text=glossary_text)
-        return [
-            {
-                "role": "system",
-                "content": f"Return only valid JSON matching the schema. Use only {lang_name}.",
             },
             {"role": "user", "content": user_prompt},
         ]

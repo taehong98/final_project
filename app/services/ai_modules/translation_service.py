@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 import os
 import re
@@ -8,26 +10,33 @@ from typing import Dict, List, Optional
 import pandas as pd
 from dotenv import load_dotenv
 
+from .policy_heuristics import (
+    count_preserve_tokens,
+    protect_special_tokens,
+    restore_special_tokens,
+)
 from .prompt_builder import PromptBuilder
+from .text_preprocessor import clean_policy_text
 
 
 class PolicyTranslationService:
-    REQUIRED_COLUMNS = ["행정 용어", "영어", "베트남어", "중국어", "일본어"]
-
-    LANG_MAP = {
-        "ko": "한국어",
-        "en": "영어",
-        "vi": "베트남어",
-        "zh": "중국어",
-        "ja": "일본어",
-    }
-
+    SOURCE_TERM_COL = "\uD589\uC815 \uC6A9\uC5B4"
     GLOSSARY_COL_MAP = {
-        "en": "영어",
-        "vi": "베트남어",
-        "zh": "중국어",
-        "ja": "일본어",
+        "en": "\uC601\uC5B4",
+        "vi": "\uBCA0\uD2B8\uB0A8\uC5B4",
+        "zh": "\uC911\uAD6D\uC5B4",
+        "ja": "\uC77C\uBCF8\uC5B4",
     }
+    REQUIRED_COLUMNS = [SOURCE_TERM_COL, *GLOSSARY_COL_MAP.values()]
+    LANG_MAP = {
+        "ko": "Korean",
+        "en": "English",
+        "vi": "Vietnamese",
+        "zh": "Chinese",
+        "ja": "Japanese",
+    }
+    MANWON_RE = re.compile(r"(?P<num>\d[\d,]*(?:\.\d+)?)\s*\uB9CC\uC6D0")
+    WON_RE = re.compile(r"(?P<num>\d[\d,]*(?:\.\d+)?)\s*\uC6D0")
 
     def __init__(
         self,
@@ -61,25 +70,39 @@ class PolicyTranslationService:
 
         missing = [col for col in self.REQUIRED_COLUMNS if col not in df.columns]
         if missing:
-            raise ValueError(f"CSV에 필요한 컬럼이 없습니다: {missing}")
+            raise ValueError(f"Missing glossary columns: {missing}")
 
         df = df[self.REQUIRED_COLUMNS].fillna("")
         for col in self.REQUIRED_COLUMNS:
             df[col] = df[col].astype(str).str.strip()
-        return df[df["행정 용어"] != ""].reset_index(drop=True)
+        df = df[df[self.SOURCE_TERM_COL] != ""].reset_index(drop=True)
+        return df
+
+    @staticmethod
+    def _normalize_text(text: str) -> str:
+        compact = str(text or "").strip()
+        compact = re.sub(r"\s+", " ", compact)
+        return compact
 
     def _extract_relevant_glossary(self, text: str, policy_text: str, target_lang: str) -> str:
         if target_lang == "ko":
             return ""
+
         target_col = self.GLOSSARY_COL_MAP[target_lang]
         combined_text = f"{text}\n{policy_text}"
-        matches = []
+        matches: list[tuple[str, str]] = []
+
         for _, row in self.glossary_df.iterrows():
-            term = row["행정 용어"]
-            translated = row[target_col]
-            if term and translated and term in combined_text:
-                matches.append(f"- {term} -> {translated}")
-        return "\n".join(matches)
+            term = str(row[self.SOURCE_TERM_COL]).strip()
+            translated = str(row[target_col]).strip()
+            if not term or not translated:
+                continue
+            if term in combined_text:
+                matches.append((term, translated))
+
+        matches.sort(key=lambda item: len(item[0]), reverse=True)
+        limited = matches[:12]
+        return "\n".join(f"- {term} -> {translated}" for term, translated in limited)
 
     def _post_to_ollama(self, payload: Dict) -> Dict:
         url = self.base_url + "/api/chat"
@@ -90,23 +113,27 @@ class PolicyTranslationService:
             headers={"Content-Type": "application/json"},
             method="POST",
         )
+
         try:
             with urllib.request.urlopen(request, timeout=self.timeout) as response:
                 raw = response.read().decode("utf-8")
         except urllib.error.HTTPError as exc:
             body = exc.read().decode("utf-8", errors="ignore")
-            raise RuntimeError(f"Ollama HTTP 오류: {exc.code} / {body}") from exc
+            raise RuntimeError(f"Ollama HTTP error: {exc.code} / {body}") from exc
         except Exception as exc:
-            raise RuntimeError(f"Ollama 호출 실패: {exc}") from exc
+            raise RuntimeError(f"Failed to call Ollama: {exc}") from exc
 
         try:
             return json.loads(raw)
         except json.JSONDecodeError as exc:
-            raise RuntimeError(f"Ollama 응답 파싱 실패: {raw[:500]}") from exc
+            raise RuntimeError(f"Failed to parse Ollama response: {raw[:500]}") from exc
 
     def _call_model_json(self, messages: List[Dict[str, str]], schema: Dict) -> Dict:
+        return self._call_model_json_for_model(self.model_name, messages, schema)
+
+    def _call_model_json_for_model(self, model_name: str, messages: List[Dict[str, str]], schema: Dict) -> Dict:
         payload = {
-            "model": self.model_name,
+            "model": model_name,
             "messages": messages,
             "stream": False,
             "think": False,
@@ -116,45 +143,127 @@ class PolicyTranslationService:
         outer = self._post_to_ollama(payload)
         content = str(outer.get("message", {}).get("content", "")).strip()
         if not content:
-            raise RuntimeError("모델 응답이 비어 있습니다.")
+            raise RuntimeError("Empty translation response.")
+
         try:
-            return json.loads(content)
+            parsed = json.loads(content)
         except json.JSONDecodeError as exc:
-            raise RuntimeError(f"모델 content JSON 파싱 실패: {content}") from exc
+            raise RuntimeError(f"Failed to parse translation JSON: {content}") from exc
+
+        if not isinstance(parsed, dict):
+            raise RuntimeError(f"Unexpected translation payload: {parsed}")
+
+        normalized = dict(parsed)
+        if not str(normalized.get("translated_text", "")).strip():
+            for key in ("translation", "translated", "result", "text", "title"):
+                candidate = str(normalized.get(key, "")).strip()
+                if candidate:
+                    normalized["translated_text"] = candidate
+                    break
+
+        if not str(normalized.get("translated_text", "")).strip():
+            string_values = [str(value).strip() for value in normalized.values() if isinstance(value, str) and str(value).strip()]
+            if len(string_values) == 1:
+                normalized["translated_text"] = string_values[0]
+
+        return normalized
 
     @staticmethod
-    def _normalize_text(text: str) -> str:
-        text = str(text or "").strip()
-        text = re.sub(r"\s+", " ", text)
-        return text
+    def _format_number(value: float, target_lang: str) -> str:
+        rounded = int(round(value))
+        if target_lang == "vi":
+            return f"{rounded:,}".replace(",", ".")
+        return f"{rounded:,}"
+
+    def _localize_money_units(self, text: str, target_lang: str) -> str:
+        if target_lang == "ko":
+            return text
+
+        def replace_manwon(match: re.Match[str]) -> str:
+            raw_value = match.group("num").replace(",", "")
+            try:
+                numeric = float(raw_value)
+            except ValueError:
+                return match.group(0)
+
+            if target_lang == "zh":
+                return f"{match.group('num')}万韩元"
+            if target_lang == "ja":
+                return f"{match.group('num')}万ウォン"
+            return f"{self._format_number(numeric * 10000, target_lang)} KRW"
+
+        def replace_won(match: re.Match[str]) -> str:
+            raw_value = match.group("num").replace(",", "")
+            try:
+                numeric = float(raw_value)
+            except ValueError:
+                return match.group(0)
+
+            if target_lang == "zh":
+                return f"{match.group('num')}韩元"
+            if target_lang == "ja":
+                return f"{match.group('num')}ウォン"
+            return f"{self._format_number(numeric, target_lang)} KRW"
+
+        localized = self.MANWON_RE.sub(replace_manwon, text)
+        localized = self.WON_RE.sub(replace_won, localized)
+        localized = localized.replace("韩元元", "韩元")
+        localized = localized.replace("ウォンウォン", "ウォン")
+        localized = localized.replace("KRW KRW", "KRW")
+        return localized
+
+    def _candidate_models(self, target_lang: str) -> List[str]:
+        candidates: list[str] = []
+
+        env_specific = os.getenv(f"QWEN_TRANSLATION_MODEL_{target_lang.upper()}")
+        env_generic = os.getenv("QWEN_TRANSLATION_MODEL")
+
+        if env_specific:
+            candidates.append(env_specific)
+        if target_lang in {"zh", "ja"}:
+            candidates.append("qwen3:4b")
+        if env_generic:
+            candidates.append(env_generic)
+        candidates.append(self.model_name)
+
+        deduped: list[str] = []
+        seen: set[str] = set()
+        for candidate in candidates:
+            normalized = str(candidate or "").strip()
+            if not normalized or normalized in seen:
+                continue
+            deduped.append(normalized)
+            seen.add(normalized)
+        return deduped
 
     def apply_glossary_postprocess(self, text: str, target_lang: str) -> str:
         if target_lang == "ko":
             return self._normalize_text(text)
+
         target_col = self.GLOSSARY_COL_MAP[target_lang]
         out = str(text or "")
         rows = sorted(
             self.glossary_df.to_dict("records"),
-            key=lambda row: len(str(row.get("행정 용어", ""))),
+            key=lambda row: len(str(row.get(self.SOURCE_TERM_COL, ""))),
             reverse=True,
         )
         for row in rows:
-            src = str(row.get("행정 용어", "")).strip()
-            tgt = str(row.get(target_col, "")).strip()
-            if not src or not tgt:
+            source_term = str(row.get(self.SOURCE_TERM_COL, "")).strip()
+            translated_term = str(row.get(target_col, "")).strip()
+            if not source_term or not translated_term:
                 continue
-            out = out.replace(src, tgt)
+            out = out.replace(source_term, translated_term)
         return self._normalize_text(out)
 
     def translate_text(self, text: str, policy_text: str, target_lang: str) -> Dict[str, str]:
         text = self._normalize_text(text)
-        policy_text = str(policy_text or "")
+        policy_text = clean_policy_text(policy_text)
         target_lang = str(target_lang or "ko").strip().lower()
 
         if not text:
-            raise ValueError("번역할 text가 비어 있습니다.")
+            raise ValueError("text is empty.")
         if target_lang not in self.LANG_MAP:
-            raise ValueError(f"지원하지 않는 언어입니다: {target_lang}")
+            raise ValueError(f"Unsupported language: {target_lang}")
 
         if target_lang == "ko":
             return {
@@ -164,19 +273,39 @@ class PolicyTranslationService:
                 "is_fallback": False,
             }
 
+        protected_text, replacements = protect_special_tokens(text)
         glossary_str = self._extract_relevant_glossary(text, policy_text, target_lang)
         schema = self.prompt_builder.get_translation_schema()
         messages = self.prompt_builder.build_translation_messages(
-            text=text,
+            text=protected_text,
             target_lang=target_lang,
             glossary_text=glossary_str,
+            policy_context=policy_text,
         )
-        data = self._call_model_json(messages, schema)
+        last_error: Exception | None = None
+        data: Dict[str, str] | None = None
+        for candidate_model in self._candidate_models(target_lang):
+            try:
+                data = self._call_model_json_for_model(candidate_model, messages, schema)
+                break
+            except Exception as exc:
+                last_error = exc
+                continue
+
+        if data is None:
+            raise RuntimeError(f"Translation failed for all candidate models: {last_error}")
+
         translated_text = str(data.get("translated_text", "")).strip()
         if not translated_text:
-            raise RuntimeError("번역 결과가 비어 있습니다.")
+            raise RuntimeError("Translated text is empty.")
 
+        translated_text = restore_special_tokens(translated_text, replacements)
         translated_text = self.apply_glossary_postprocess(translated_text, target_lang)
+        translated_text = self._localize_money_units(translated_text, target_lang)
+
+        if count_preserve_tokens(translated_text) > 0:
+            raise RuntimeError("Translation still contains unresolved preserve tokens.")
+
         return {
             "language": target_lang,
             "translated_text": translated_text,

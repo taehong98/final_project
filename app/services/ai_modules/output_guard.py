@@ -5,43 +5,70 @@ from typing import Dict, Optional
 
 
 class OutputGuard:
-    LANG_MAP = {
-        "ko": "한국어",
-        "en": "영어",
-        "vi": "베트남어",
-        "zh": "중국어",
-        "ja": "일본어",
-    }
+    VI_MARKERS = (
+        " ho tro ",
+        " dieu kien ",
+        " dang ky ",
+        " nguoi ",
+        " thoi han ",
+        " khong ",
+        " duoc ",
+        " thanh ",
+    )
+    EN_MARKERS = (
+        " the ",
+        " and ",
+        " for ",
+        " with ",
+        " support ",
+        " apply ",
+        " eligible ",
+    )
+    JA_MARKERS = ("\u3067\u3059", "\u307E\u3059", "\u306E", "\u3092", "\u306B", "\u7533\u8ACB")
 
     @staticmethod
     def _count(pattern: str, text: str) -> int:
         return len(re.findall(pattern, str(text or "")))
 
-    def _contains_hangul(self, text: str) -> bool:
-        return self._count(r"[가-힣]", text) > 0
+    @staticmethod
+    def _normalize_marker_text(text: str) -> str:
+        lowered = str(text or "").lower()
+        lowered = re.sub(r"[^a-z\u00C0-\u024F]+", " ", lowered)
+        return f" {lowered.strip()} "
+
+    def _looks_like_english(self, text: str) -> bool:
+        markers = self._normalize_marker_text(text)
+        latin = self._count(r"[A-Za-z]", text)
+        accented = self._count(r"[\u00C0-\u024F]", text)
+        return latin >= 3 and accented == 0 and any(marker in markers for marker in self.EN_MARKERS)
+
+    def _looks_like_vietnamese(self, text: str) -> bool:
+        markers = self._normalize_marker_text(text)
+        latin = self._count(r"[A-Za-z]", text)
+        accented = self._count(r"[\u00C0-\u024F]", text)
+        return latin >= 3 and (accented >= 1 or any(marker in markers for marker in self.VI_MARKERS))
 
     def looks_like_target_language(self, text: str, target_lang: str) -> bool:
         text = str(text or "").strip()
         if not text:
             return False
 
-        hangul = self._count(r"[가-힣]", text)
+        hangul = self._count(r"[\uAC00-\uD7A3]", text)
+        han = self._count(r"[\u4E00-\u9FFF]", text)
+        kana = self._count(r"[\u3040-\u30FF]", text)
         latin = self._count(r"[A-Za-z]", text)
-        cjk = self._count(r"[一-鿿]", text)
-        kana = self._count(r"[぀-ヿ]", text)
-        viet = self._count(r"[A-Za-zÀ-ỹ]", text)
 
         if target_lang == "ko":
             return hangul >= 2
         if target_lang == "en":
-            return latin >= 3 and hangul == 0 and kana == 0
+            return hangul <= 6 and han == 0 and kana == 0 and self._looks_like_english(text)
         if target_lang == "zh":
-            return cjk >= 2 and hangul == 0 and kana == 0
+            return han >= 6 and hangul <= 6 and kana == 0
         if target_lang == "ja":
-            return (kana >= 1 or cjk >= 2) and hangul == 0
+            return hangul <= 40 and (kana >= 2 or any(marker in text for marker in self.JA_MARKERS)) and (kana + han) >= 8
         if target_lang == "vi":
-            return viet >= 3 and hangul == 0 and kana == 0
-        return True
+            return hangul <= 6 and han == 0 and kana == 0 and self._looks_like_vietnamese(text)
+        return latin > 0 or hangul > 0 or han > 0 or kana > 0
 
     def guard_summary(
         self,
@@ -111,8 +138,8 @@ class OutputGuard:
         data: Optional[Dict],
         *,
         target_lang: str = "ko",
-        fallback_reason: str = "판정 가능한 핵심 조건을 추가로 확인해야 합니다.",
-        fallback_guide: str = "정책 원문에서 세부 자격 요건과 신청 조건을 다시 확인해 주세요.",
+        fallback_reason: str = "\uC608\uC815 \uAC00\uB2A5\uD55C \uBCF4\uC644 \uC870\uAC74\uC744 \uCD94\uAC00\uB85C \uD655\uC778\uD574\uC57C \uD569\uB2C8\uB2E4.",
+        fallback_guide: str = "\uC815\uCC45 \uC6D0\uBB38\uC5D0\uC11C \uC138\uBD80 \uC790\uACA9 \uC694\uAC74\uACFC \uC2E0\uCCAD \uC870\uAC74\uC744 \uB2E4\uC2DC \uD655\uC778\uD574 \uC8FC\uC138\uC694.",
         source_if_valid: str = "qwen",
         source_if_fallback: str = "guard_fallback",
     ) -> Dict[str, object]:
@@ -152,8 +179,8 @@ class OutputGuard:
         guarded_analysis = self.guard_analysis(
             data,
             target_lang=target_lang,
-            fallback_reason=str(data.get("rejection_reason", "") or "판정 가능한 핵심 조건을 추가로 확인해야 합니다."),
-            fallback_guide=str(data.get("guide", "") or "정책 원문에서 세부 자격 요건과 신청 조건을 다시 확인해 주세요."),
+            fallback_reason=str(data.get("rejection_reason", "") or "\uC608\uC815 \uAC00\uB2A5\uD55C \uBCF4\uC644 \uC870\uAC74\uC744 \uCD94\uAC00\uB85C \uD655\uC778\uD574\uC57C \uD569\uB2C8\uB2E4."),
+            fallback_guide=str(data.get("guide", "") or "\uC815\uCC45 \uC6D0\uBB38\uC5D0\uC11C \uC138\uBD80 \uC790\uACA9 \uC694\uAC74\uACFC \uC2E0\uCCAD \uC870\uAC74\uC744 \uB2E4\uC2DC \uD655\uC778\uD574 \uC8FC\uC138\uC694."),
             source_if_valid=str(data.get("analysis_source", "") or "qwen"),
         )
         guarded_translation = self.guard_translation(

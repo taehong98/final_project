@@ -2,38 +2,49 @@ from __future__ import annotations
 
 import re
 
+from .policy_heuristics import _classify_label, _split_labeled_line, normalize_space, strip_noise_lines
+
+
 KEEP_PREFIXES = [
-    "정책명:", "정책 요약:", "정책 설명:", "지원 대상:", "지원 내용:", "지원 금액:",
-    "신청 방법:", "신청 기간:", "제출 서류:", "추가 자격:", "제한 대상:",
-    "선정 기준:", "신청 대상:", "유의 사항:", "제외 대상:",
+    "\uC815\uCC45\uBA85",
+    "\uC815\uCC45 \uC694\uC57D",
+    "\uC815\uCC45 \uC124\uBA85",
+    "\uC9C0\uC6D0 \uB300\uC0C1",
+    "\uC9C0\uC6D0 \uB0B4\uC6A9",
+    "\uC9C0\uC6D0 \uAE08\uC561",
+    "\uC2E0\uCCAD \uBC29\uBC95",
+    "\uC2E0\uCCAD \uAE30\uAC04",
+    "\uC81C\uCD9C \uC11C\uB958",
+    "\uCD94\uAC00 \uC790\uACA9",
+    "\uC81C\uD55C \uB300\uC0C1",
+    "\uC2EC\uC0AC \uBC29\uBC95",
+    "policy name",
+    "summary",
+    "description",
+    "target",
+    "benefit",
+    "application",
 ]
 
-DROP_PATTERNS = [
-    r"https?://\S+",
-    r"서비스URL\s*:\s*\S+",
-    r"대표문의\s*:\s*.*",
-    r"문의\s*:\s*.*",
-    r"콜센터\s*[:：]?\s*[0-9\-\s/()]+",
-    r"상담센터\s*[:：]?\s*[0-9\-\s/()]+",
-]
+INLINE_URL_RE = re.compile(r"https?://\S+")
 
 
-def _normalize_line(line: str) -> str:
-    line = str(line or "").strip()
-    line = re.sub(r"\s+", " ", line)
-    return line
+def _is_prioritized_line(line: str) -> bool:
+    lowered = normalize_space(line).lower()
+    label, _ = _split_labeled_line(line)
+    return bool(_classify_label(label)) or any(lowered.startswith(prefix.lower()) for prefix in KEEP_PREFIXES)
 
 
 def clean_policy_text(text: str) -> str:
-    text = str(text or "").strip()
-    if not text:
+    raw = str(text or "").strip()
+    if not raw:
         return ""
 
-    for pattern in DROP_PATTERNS:
-        text = re.sub(pattern, "", text, flags=re.IGNORECASE)
+    without_noise = strip_noise_lines(raw)
+    without_inline_urls = INLINE_URL_RE.sub("", without_noise)
+    lines = [normalize_space(line) for line in without_inline_urls.splitlines() if normalize_space(line)]
 
-    lines = [_normalize_line(line) for line in text.splitlines() if _normalize_line(line)]
-    prioritized = [line for line in lines if any(line.startswith(prefix) for prefix in KEEP_PREFIXES)]
+    prioritized = [line for line in lines if _is_prioritized_line(line)]
     selected = prioritized or lines
 
     deduped: list[str] = []
@@ -41,9 +52,9 @@ def clean_policy_text(text: str) -> str:
     for line in selected:
         if line in seen:
             continue
-        deduped.append(line)
         seen.add(line)
+        deduped.append(line)
+        if len(deduped) >= 14:
+            break
 
-    cleaned = "\n".join(deduped)
-    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
-    return cleaned.strip()
+    return "\n".join(deduped).strip()
