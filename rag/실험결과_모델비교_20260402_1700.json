@@ -1,0 +1,37 @@
+{
+  "timestamp": "20260402_1700",
+  "sample_size": 1000,
+  "num_queries": 26,
+  "condition": "CPU 임베딩, max_chars=1000, batch_size=32, bge-reranker-v2-m3로 품질 측정",
+  "winner": "bge-m3",
+  "conclusion": "bge-m3가 가장 높은 품질 점수. multilingual-e5-large는 0.013 차이로 2위. gte-Qwen2-1.5B는 하드웨어 한계로 측정 불가.",
+  "models": [
+    {
+      "model": "bge-m3",
+      "dim": 1024,
+      "avg_quality": 0.5106,
+      "avg_search_ms": 12,
+      "doc_embed_sec": 506.9,
+      "load_time_sec": 3.9,
+      "note": "현재 파이프라인 사용 모델"
+    },
+    {
+      "model": "multilingual-e5-large",
+      "dim": 1024,
+      "avg_quality": 0.498,
+      "avg_search_ms": 8,
+      "doc_embed_sec": 535.5,
+      "load_time_sec": 86.1,
+      "note": "품질 -0.013, BM25 하이브리드 없음"
+    },
+    {
+      "model": "gte-Qwen2-1.5B",
+      "dim": 1536,
+      "avg_quality": null,
+      "avg_search_ms": null,
+      "doc_embed_sec": null,
+      "load_time_sec": null,
+      "note": "실행 불가 - RAM/페이징 파일 부족 (7.1GB 모델)"
+    }
+  ]
+}

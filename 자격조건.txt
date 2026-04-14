@@ -1,0 +1,143 @@
+JA0101	string
+남성
+
+JA0102	string
+여성
+
+JA0110	integer
+대상연령(시작)
+
+JA0111	integer
+대상연령(종료)
+
+JA0201	string
+중위소득 0~50%
+
+JA0202	string
+중위소득 51~75%
+
+JA0203	string
+중위소득 76~100%
+
+JA0204	string
+중위소득 101~200%
+
+JA0205	string
+중위소득 200% 초과
+
+JA0301	string
+예비부모/난임
+
+JA0302	string
+임산부
+
+JA0303	string
+출산/입양
+
+JA0313	string
+농업인
+
+JA0314	string
+어업인
+
+JA0315	string
+축산업인
+
+JA0316	string
+임업인
+
+JA0317	string
+초등학생
+
+JA0318	string
+중학생
+
+JA0319	string
+고등학생
+
+JA0320	string
+대학생/대학원생
+
+JA0322	string
+해당사항없음
+
+JA0326	string
+근로자/직장인
+
+JA0327	string
+구직자/실업자
+
+JA0401	string
+다문화가족
+
+JA0402	string
+북한이탈주민
+
+JA0403	string
+한부모가정/조손가정
+
+JA0404	string
+1인가구
+
+JA0410	string
+해당사항없음
+
+JA0411	string
+다자녀가구
+
+JA0412	string
+무주택세대
+
+JA0413	string
+신규전입
+
+JA0414	string
+확대가족
+
+JA1101	string
+예비창업자
+
+JA1102	string
+영업중
+
+JA1103	string
+생계곤란/폐업예정자
+
+JA1201	string
+음식적업
+
+JA1202	string
+제조업
+
+JA1299	string
+기타업종
+
+JA2101	string
+중소기업
+
+JA2102	string
+사회복지시설
+
+JA2103	string
+기관/단체
+
+JA2201	string
+제조업
+
+JA2202	string
+농업,임업 및 어업
+
+JA2203	string
+정보통신업
+
+JA2299	string
+기타업종
+
+JA0328	string
+장애인
+
+JA0329	string
+국가보훈대상자
+
+JA0330	string
+질병/질환자

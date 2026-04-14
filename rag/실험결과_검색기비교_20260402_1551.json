@@ -1,0 +1,15 @@
+{
+  "timestamp": "20260402_1551",
+  "num_questions": 15,
+  "bm25_hybrid": {
+    "faithfulness": 1.0,
+    "answer_relevancy": 0.441,
+    "average": 0.7205
+  },
+  "sparse_hybrid": {
+    "faithfulness": 0.9391,
+    "answer_relevancy": 0.4574,
+    "average": 0.6982
+  },
+  "winner": "BM25 하이브리드"
+}
