@@ -48,20 +48,60 @@ INCOME_ORDER = {
     "MID_200_PLUS": 5,
 }
 
+REGION_KEYWORDS: dict[str, set[str]] = {
+    "서울": {"서울", "서울시", "서울특별시"},
+    "부산": {"부산", "부산시", "부산광역시"},
+    "대구": {"대구", "대구시", "대구광역시"},
+    "인천": {"인천", "인천시", "인천광역시"},
+    "광주": {"광주", "광주시", "광주광역시"},
+    "대전": {"대전", "대전시", "대전광역시"},
+    "울산": {"울산", "울산시", "울산광역시"},
+    "세종": {"세종", "세종시", "세종특별자치시"},
+    "경기": {"경기", "경기도", "수원", "용인", "성남", "안양", "고양", "부천", "화성", "평택", "포천"},
+    "강원": {"강원", "강원도", "강원특별자치도"},
+    "충북": {"충북", "충청북도"},
+    "충남": {"충남", "충청남도"},
+    "전북": {"전북", "전라북도", "전북특별자치도"},
+    "전남": {"전남", "전라남도", "영암", "해남", "강진", "화순"},
+    "경북": {"경북", "경상북도"},
+    "경남": {"경남", "경상남도"},
+    "제주": {"제주", "제주도", "제주특별자치도"},
+}
+
+NATIONAL_POLICY_KEYWORDS = {
+    "전국", "전국민", "정부", "국가", "중앙", "부처", "공사", "공단", "재단",
+    "고용노동부", "국토교통부", "보건복지부", "교육부", "금융위원회", "중소벤처기업부",
+    "한국", "주택금융공사", "한국장학재단",
+}
+
+TARGET_MISMATCH_KEYWORDS = {
+    "senior": {"노인", "어르신", "기초연금"},
+    "youth": {"청년"},
+    "family": {"신혼부부", "다자녀", "출산", "보육", "아동", "자녀", "육아", "한부모"},
+    "self_employed": {"소상공인", "자영업", "창업자"},
+    "employee_only": {"재직자", "근로자", "직장인", "고용보험"},
+}
+
+
+def _clamp_score(value: float | int) -> int:
+    return max(0, min(99, int(round(value))))
+
 
 def _score_level(score: int) -> ScoreLevel:
-    if score >= 85:
+    if score >= 90:
         return ScoreLevel.HIGH
-    if score >= 65:
+    if score >= 70:
         return ScoreLevel.MID
     return ScoreLevel.LOW
 
 
 def _apply_status(score: int, blocking_reasons: list[str]) -> ApplyStatus:
-    if blocking_reasons or score < 50:
+    if blocking_reasons:
         return ApplyStatus.NOT_RECOMMENDED
-    if score >= 85:
+    if score >= 90:
         return ApplyStatus.APPLICABLE_NOW
+    if score < 45:
+        return ApplyStatus.NOT_RECOMMENDED
     return ApplyStatus.NEEDS_CHECK
 
 
@@ -96,6 +136,95 @@ def _candidate_richness(
         len(master.summary or ""),
         len(master.description or ""),
     )
+
+
+def _policy_text_blob(
+    master: PolicyMaster,
+    condition: PolicyCondition | None,
+    benefit: PolicyBenefit | None,
+    application: PolicyApplication | None,
+) -> str:
+    parts = [
+        master.title or "",
+        master.summary or "",
+        master.description or "",
+        master.managing_agency or "",
+        master.category_large or "",
+        master.category_medium or "",
+        (condition.additional_qualification_text if condition else "") or "",
+        (condition.restricted_target_text if condition else "") or "",
+        (benefit.benefit_detail_text if benefit else "") or "",
+        (benefit.benefit_amount_raw_text if benefit else "") or "",
+        (application.application_method_text if application else "") or "",
+        (application.application_period_text if application else "") or "",
+    ]
+    return " ".join(str(part or "") for part in parts if part is not None).lower()
+
+
+def _region_bucket(region_name: str | None) -> str | None:
+    text = (region_name or "").strip()
+    for bucket, keywords in REGION_KEYWORDS.items():
+        if any(keyword in text for keyword in keywords):
+            return bucket
+    return None
+
+
+def cap_policy_score(
+    *,
+    req: AnalyzeRequest,
+    master: PolicyMaster,
+    condition: PolicyCondition | None,
+    benefit: PolicyBenefit | None,
+    application: PolicyApplication | None,
+    score: int,
+    blocking_reasons: list[str],
+) -> int:
+    policy_text = _policy_text_blob(master, condition, benefit, application)
+    cap = 99
+
+    if blocking_reasons:
+        cap = min(cap, 44)
+
+    request_region = _region_bucket(req.region_name)
+    if request_region and not any(keyword in policy_text for keyword in NATIONAL_POLICY_KEYWORDS):
+        request_keywords = REGION_KEYWORDS.get(request_region, set())
+        matched_request_region = any(keyword.lower() in policy_text for keyword in request_keywords)
+        other_region_hit = any(
+            bucket != request_region and any(keyword.lower() in policy_text for keyword in keywords)
+            for bucket, keywords in REGION_KEYWORDS.items()
+        )
+        if other_region_hit and not matched_request_region:
+            cap = min(cap, 68)
+
+    if req.age < 60 and any(keyword in policy_text for keyword in TARGET_MISMATCH_KEYWORDS["senior"]):
+        cap = min(cap, 58)
+    if req.age > 39 and any(keyword in policy_text for keyword in TARGET_MISMATCH_KEYWORDS["youth"]):
+        cap = min(cap, 72)
+
+    if req.household_type.value == "SINGLE" and any(
+        keyword in policy_text for keyword in TARGET_MISMATCH_KEYWORDS["family"]
+    ):
+        cap = min(cap, 55)
+
+    if req.employment_status.value != "SELF_EMPLOYED" and any(
+        keyword in policy_text for keyword in TARGET_MISMATCH_KEYWORDS["self_employed"]
+    ):
+        cap = min(cap, 60)
+
+    if req.employment_status.value == "UNEMPLOYED" and any(
+        keyword in policy_text for keyword in TARGET_MISMATCH_KEYWORDS["employee_only"]
+    ):
+        cap = min(cap, 65)
+
+    if req.housing_status.value == "MONTHLY_RENT":
+        housing_terms = {"월세", "주거", "임대", "임차", "보증금", "전세"}
+        if not any(term in policy_text for term in housing_terms):
+            cap = min(cap, 78)
+
+    if score >= 90 and cap == 99:
+        cap = 95
+
+    return min(score, cap)
 
 
 def _condition_matches(
@@ -167,6 +296,15 @@ def analyze_policies(db: Session, req: AnalyzeRequest) -> list[AnalyzedPolicy]:
 
     for master, condition, benefit, application in policy_rows:
         score, blocking_reasons, actions, tags = _condition_matches(req, condition, application)
+        score = cap_policy_score(
+            req=req,
+            master=master,
+            condition=condition,
+            benefit=benefit,
+            application=application,
+            score=score,
+            blocking_reasons=blocking_reasons,
+        )
         level = _score_level(score)
         apply_status = _apply_status(score, blocking_reasons)
 
@@ -305,3 +443,11 @@ def get_policy_documents(db: Session, policy_id: str) -> list[PolicyDocument]:
         .scalars()
         .all()
     )
+
+
+def score_level_from_score(score: int) -> ScoreLevel:
+    return _score_level(score)
+
+
+def apply_status_from_score(score: int, blocking_reasons: list[str]) -> ApplyStatus:
+    return _apply_status(score, blocking_reasons)

@@ -32,7 +32,16 @@ from app.schemas.detail import PolicyDetailData
 from app.schemas.eligibility import AnalyzeRequest, AnalyzeResponseData, ProfileSummary
 from app.schemas.portfolio import PortfolioData, PortfolioItem
 from app.schemas.search import PolicySearchData
-from app.services.analysis import AnalyzedPolicy, get_analysis_results, get_policy_documents, get_profile_tags, persist_analysis_state
+from app.services.analysis import (
+    AnalyzedPolicy,
+    apply_status_from_score,
+    cap_policy_score,
+    get_analysis_results,
+    get_policy_documents,
+    get_profile_tags,
+    persist_analysis_state,
+    score_level_from_score,
+)
 from app.services.application import ensure_application_state, get_application_step, update_checklist_state, update_document_state
 from app.services.community import create_post, get_hot_posts, get_post, get_stats, like_post, list_posts, unlike_post
 from app.services.rag import search_rag
@@ -84,9 +93,9 @@ def build_policy_summary(
     badge_items: list[str],
     sort_order: int,
 ) -> PolicySummary:
-    if match_score >= 85:
+    if match_score >= 90:
         score_level = ScoreLevel.HIGH
-    elif match_score >= 65:
+    elif match_score >= 70:
         score_level = ScoreLevel.MID
     else:
         score_level = ScoreLevel.LOW
@@ -161,14 +170,27 @@ def build_analyzed_from_master(
     master: PolicyMaster,
     *,
     index: int,
+    request: AnalyzeRequest | None = None,
     rag_answer: str | None = None,
 ) -> AnalyzedPolicy:
     benefit = db.execute(select(PolicyBenefit).where(PolicyBenefit.policy_id == master.policy_id)).scalar_one_or_none()
     application = db.execute(select(PolicyApplication).where(PolicyApplication.policy_id == master.policy_id)).scalar_one_or_none()
+    condition = db.execute(select(PolicyCondition).where(PolicyCondition.policy_id == master.policy_id)).scalar_one_or_none()
 
-    score = max(70, 96 - ((index - 1) * 3))
-    apply_status = ApplyStatus.APPLICABLE_NOW if (application and (application.online_apply_yn or application.application_url)) else ApplyStatus.NEEDS_CHECK
-    score_level = ScoreLevel.HIGH if score >= 85 else ScoreLevel.MID
+    score = max(58, 84 - ((index - 1) * 3))
+    blocking_reasons: list[str] = []
+    if request is not None:
+        score = cap_policy_score(
+            req=request,
+            master=master,
+            condition=condition,
+            benefit=benefit,
+            application=application,
+            score=score,
+            blocking_reasons=blocking_reasons,
+        )
+    apply_status = apply_status_from_score(score, blocking_reasons)
+    score_level = score_level_from_score(score)
 
     badge_items = [master.source.upper()]
     if master.managing_agency:
@@ -196,7 +218,7 @@ def build_analyzed_from_master(
         score_level=score_level,
         apply_status=apply_status,
         eligibility_summary=eligibility_summary,
-        blocking_reasons=[],
+        blocking_reasons=blocking_reasons,
         recommended_actions=recommended_actions[:4],
         benefit_amount=benefit.benefit_amount_value if benefit else None,
         benefit_amount_label=(f"최대 {benefit.benefit_amount_value // 10000:,}만원" if benefit and benefit.benefit_amount_value and benefit.benefit_amount_value >= 10000 else (f"최대 {benefit.benefit_amount_value:,}원" if benefit and benefit.benefit_amount_value else None)),
@@ -224,6 +246,7 @@ def resolve_rag_references(
     db: Session,
     references: list[str],
     *,
+    request: AnalyzeRequest | None = None,
     rag_answer: str | None = None,
 ) -> tuple[list[PolicySummary], list[AnalyzedPolicy], list[UnmatchedPolicyItem]]:
     items: list[PolicySummary] = []
@@ -251,7 +274,7 @@ def resolve_rag_references(
         if master.policy_id in seen_policy_ids:
             continue
 
-        analyzed_item = build_analyzed_from_master(db, master, index=index, rag_answer=rag_answer)
+        analyzed_item = build_analyzed_from_master(db, master, index=index, request=request, rag_answer=rag_answer)
         items.append(build_summary_from_analyzed(analyzed_item, index=index))
         matched_analyzed.append(analyzed_item)
         seen_policy_ids.add(master.policy_id)
@@ -356,6 +379,7 @@ def analyze(request: AnalyzeRequest, db: Session = Depends(get_db)):
     rag_policies, rag_analyzed, unmatched = resolve_rag_references(
         db,
         rag_result.docs_used,
+        request=request,
         rag_answer=rag_result.answer,
     )
     persist_analysis_state(db, request, rag_analyzed)
