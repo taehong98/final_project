@@ -376,7 +376,7 @@ def analyze(request: AnalyzeRequest, db: Session = Depends(get_db)):
 @router.get("/policies/search", response_model=SuccessResponse[PolicySearchData])
 def search_policies(
     q: str = Query(..., min_length=1),
-    size: int = Query(default=20, ge=1, le=50),
+    size: int = Query(default=10, ge=1, le=50),
     db: Session = Depends(get_db),
 ):
     keyword = q.strip()

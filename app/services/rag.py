@@ -1,10 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import json
 import logging
+import time
 
 
 logger = logging.getLogger(__name__)
+RAG_CACHE_TTL_SECONDS = 20
+_RAG_CACHE: dict[str, tuple[float, "RagSearchResult"]] = {}
 
 
 @dataclass
@@ -27,7 +31,25 @@ def normalize_reference(item: object) -> str | None:
     return value or None
 
 
+def _rag_cache_key(*, query: str, user_condition: dict[str, object], lang_code: str) -> str:
+    return json.dumps(
+        {
+            "query": query,
+            "user_condition": user_condition,
+            "lang_code": lang_code,
+        },
+        ensure_ascii=False,
+        sort_keys=True,
+    )
+
+
 def search_rag(*, query: str, user_condition: dict[str, object], lang_code: str = "ko") -> RagSearchResult:
+    cache_key = _rag_cache_key(query=query, user_condition=user_condition, lang_code=lang_code)
+    cached = _RAG_CACHE.get(cache_key)
+    now = time.time()
+    if cached and (now - cached[0]) < RAG_CACHE_TTL_SECONDS:
+        return cached[1]
+
     try:
         from rag.pipeline import benepick_rag
 
@@ -38,7 +60,9 @@ def search_rag(*, query: str, user_condition: dict[str, object], lang_code: str 
         )
     except Exception as exc:
         logger.exception("RAG function call failed: %s", exc)
-        return RagSearchResult(success=False, answer=None, docs_used=[])
+        result = RagSearchResult(success=False, answer=None, docs_used=[])
+        _RAG_CACHE[cache_key] = (now, result)
+        return result
 
     data = payload.get("data") or {}
     docs_used = []
@@ -46,8 +70,10 @@ def search_rag(*, query: str, user_condition: dict[str, object], lang_code: str 
         reference = normalize_reference(item)
         if reference:
             docs_used.append(reference)
-    return RagSearchResult(
+    result = RagSearchResult(
         success=bool(payload.get("success")),
         answer=data.get("answer"),
         docs_used=docs_used,
     )
+    _RAG_CACHE[cache_key] = (time.time(), result)
+    return result

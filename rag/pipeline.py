@@ -19,6 +19,9 @@ from FlagEmbedding import FlagReranker
 
 load_dotenv()
 
+RETRIEVAL_TOP_K = int(os.getenv("BENEPICK_RETRIEVAL_TOP_K", "10"))
+FINAL_TOP_K = 5
+
 # ── 전역 초기화 ──
 # searcher/reranker는 첫 검색 요청 시점에 로딩 (import 시 VRAM/RAM 충돌 방지)
 _searcher = None
@@ -106,8 +109,8 @@ def crag_quality_check(query: str, results: list) -> list:
     elif quality >= QUALITY_MEDIUM:
         print("[CRAG] 품질 보통 → 조건 완화 재검색")
         relaxed = relax_query(query)
-        results2 = get_searcher().search(relaxed, top_k=25, alpha=0.6)
-        return rerank(query, results2, top_k=5)
+        results2 = get_searcher().search(relaxed, top_k=RETRIEVAL_TOP_K, alpha=0.6)
+        return rerank(query, results2, top_k=FINAL_TOP_K)
 
     else:
         print("[CRAG] 품질 낮음 → 카테고리 폴백")
@@ -170,7 +173,7 @@ def _fallback(query: str) -> list:
     """상위 카테고리로 폴백 검색"""
     fallback_query = get_category_query(query)
     print(f"[CRAG] 폴백 쿼리: '{fallback_query}'")
-    return get_searcher().search(fallback_query, top_k=5, alpha=0.6)
+    return get_searcher().search(fallback_query, top_k=FINAL_TOP_K, alpha=0.6)
 
 
 # ── LLM 답변 생성 ──
@@ -255,14 +258,14 @@ def benepick_rag(
 
         # ② 하이브리드 검색 (BM25 + 벡터)
         search_start = time.time()
-        results = get_searcher().search(search_query, top_k=25, alpha=0.6)
+        results = get_searcher().search(search_query, top_k=RETRIEVAL_TOP_K, alpha=0.6)
         search_time_ms = round((time.time() - search_start) * 1000)
         if not results:
             return error_response("SEARCH_FAILED", "검색 결과가 없습니다.")
         print(f"[검색] {len(results)}개 후보 검색 완료 ({search_time_ms}ms)")
 
         # ② Reranking
-        reranked = rerank(user_query, results, top_k=5)
+        reranked = rerank(user_query, results, top_k=FINAL_TOP_K)
         print(f"[Rerank] {len(reranked)}개로 압축")
 
         # ③ CRAG 품질 검증
@@ -328,8 +331,8 @@ if __name__ == "__main__":
 
         for query, lang in test_queries:
             # alpha 값 적용해서 검색
-            results = get_searcher().search(query, top_k=25, alpha=alpha)
-            reranked = rerank(query, results, top_k=5)
+            results = get_searcher().search(query, top_k=RETRIEVAL_TOP_K, alpha=alpha)
+            reranked = rerank(query, results, top_k=FINAL_TOP_K)
             final_docs = crag_quality_check(query, reranked)
 
             scores = get_reranker().compute_score(
